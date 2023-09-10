@@ -1,9 +1,10 @@
 |%
-+$  valtype  $?  %f64
-                 %i64
-                 %f32
-                 %i32
-             ==
++$  valtype
+  $?  %f64
+      %i64
+      %f32
+      %i32
+  ==
 ::
 +$  module  (map section-name section)
 ::
