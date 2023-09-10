@@ -6,29 +6,18 @@
       %i32
   ==
 ::
-+$  module  (map section-name section)
-::
-+$  section
-  $+  section
-  $%  type-section
-      function-section
-      code-section
-      export-section
-  ==
-::
-+$  section-name
-  $+  section-name
-  $?  %type-section
-      %code-section
-      %function-section
-      %export-section
++$  module
+  $:
+    type-section=(unit type-section)
+    code-section=(unit code-section)
+    function-section=(unit function-section)
+    export-section=(unit export-section)
   ==
 ::  Type section
 ::
 +$  type-section
   $+  type-section
-  $:  %type-section
-      num-types=@
+  $:  num-types=@
       types=(list func-type)
   ==
 ::
@@ -42,8 +31,7 @@
 ::
 +$  code-section
   $+  code-section
-  $:  %code-section
-      num-functions=@
+  $:  num-functions=@
       functions=(list function-body)
   ==
 +$  function-body
@@ -61,17 +49,14 @@
 ::
 +$  function-section
   $+  function-section
-  $:  %function-section
-      num-functions=@
+  $:  num-functions=@
       function-types=(list @)
   ==
 ::  Export section
 ::
 +$  export-section
   $+  export-section
-  $:  %export-section
-      exports=(map @tas export-desc)
-  ==
+  (map @tas export-desc)
 ::
 +$  export-desc
   $%  [%func i=@]

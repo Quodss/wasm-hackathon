@@ -56,7 +56,7 @@
   ::  resolve name
   =/  =export-section  (get-export-section module)
   =/  func-id=@
-    =/  =export-desc  (~(got by exports.export-section) export-func)
+    =/  =export-desc  (~(got by export-section) export-func)
     ?+  export-desc  !!
       [%func i=@]  i.export-desc
     ==
@@ -71,33 +71,21 @@
 ++  get-export-section
   |=  =module
   ^-  export-section
-  =+  sec=(~(got by module) %export-section)
-  ?+  sec  !!
-    [%export-section *]  sec
-  ==
+  (need export-section.module)
 ::
 ++  get-function-section
   |=  =module
   ^-  function-section
-  =+  sec=(~(got by module) %function-section)
-  ?+  sec  !!
-    [%function-section *]  sec
-  ==
+  (need function-section.module)
 ::
 ++  get-type-section
   |=  =module
   ^-  type-section
-  =+  sec=(~(got by module) %type-section)
-  ?+  sec  !!
-    [%type-section *]  sec
-  ==
+  (need type-section.module)
 ::
 ++  get-code-section
   |=  =module
   ^-  code-section
-  =+  sec=(~(got by module) %code-section)
-  ?+  sec  !!
-    [%code-section *]  sec
-  ==
+  (need code-section.module)
 ::
 --

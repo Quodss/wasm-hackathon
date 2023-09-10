@@ -18,20 +18,10 @@
     [%local-get 2]
   ==
 =/  module-test=module
-  %-  my
-  :~
-  ::
-    :-  %type-section
-    [%type-section 1 ~[[2 ~[%i32 %i32] 1 ~[%i32]]]]
-  ::
-    :-  %export-section
-    [%export-section (my ~[['add-two-numbers' %func 0]])]
-  ::
-    :-  %function-section
-    [%function-section 0 ~[0]]
-  ::
-    :-  %code-section
-    [%code-section 1 ~[function-body]]
-  ::
+  :*
+    type-section=`[1 ~[[2 ~[%i32 %i32] 1 ~[%i32]]]]
+    code-section=`[1 ~[function-body]]
+    function-section=`[0 ~[0]]
+    export-section=`(my ~[['add-two-numbers' %func 0]])
   ==
 (draft-interpret-module.wasm 'add-two-numbers' module-test ~[10 2])
