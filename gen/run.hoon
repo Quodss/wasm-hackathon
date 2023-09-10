@@ -5,7 +5,7 @@
 :-  %say  |=  *  :-  %noun
 ::
 =/  =function-body
-  :-  ~[%i32 %i32 %i32 %f32]
+  :-  locals=~[%i32 %i32 %i32 %f32]
   :~
     [%local-get 0]
     [%local-set 2]
@@ -19,9 +19,9 @@
   ==
 =/  module-test=module
   :*
-    type-section=`[1 ~[[2 ~[%i32 %i32] 1 ~[%i32]]]]
-    code-section=`[1 ~[function-body]]
-    function-section=`[0 ~[0]]
-    export-section=`(my ~[['add-two-numbers' %func 0]])
+    ^=  type-section      `[1 ~[[2 ~[%i32 %i32] 1 ~[%i32]]]]
+    ^=  code-section      `[1 ~[function-body]]
+    ^=  function-section  `[0 ~[0]]
+    ^=  export-section    `(my ~[['add-two-numbers' %func 0]])
   ==
 (draft-interpret-module.wasm 'add-two-numbers' module-test ~[10 2])
