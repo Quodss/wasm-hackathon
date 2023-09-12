@@ -1,3 +1,5 @@
+::  Very rough sketch, didn't try to compile
+::
 /-  *wasm
 |^  wasm=@
 ^-  module
