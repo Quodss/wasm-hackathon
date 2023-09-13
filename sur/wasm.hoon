@@ -44,6 +44,7 @@
     [%local-get @]
     [%local-set @]
     [%i32-add ~]
+    [%end ~]
   ==  
 ::  Function section
 ::
@@ -56,7 +57,9 @@
 ::
 +$  export-section
   $+  export-section
-  (map @tas export-desc)
+  $:  num-exports=@
+      exports=(map @t export-desc)
+  ==
 ::
 +$  export-desc
   $%  [%func i=@]
