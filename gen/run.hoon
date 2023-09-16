@@ -6,7 +6,7 @@
 /*  addtwo-wasm  %wasm  /add-two/wasm
 :-  %say  |=  *  :-  %noun
 ::
-%^  draft-interpret-module.wasm
+%^    draft-interpret-module.wasm
     'addTwo'
   (main:wasm-to-ast addtwo-wasm)
 ~[10 2]
