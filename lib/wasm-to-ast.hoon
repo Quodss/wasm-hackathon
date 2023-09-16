@@ -8,10 +8,11 @@
   |=  wasm=@
   ^-  module
   =/  wasm-bytes=(list @ux)  (rip 3 wasm)
-  ?>  .=  (scag 8 wasm-bytes)
+  ?>  ~|  'malformed-wasm-header'
+      .=  (scag 8 wasm-bytes)
       ^~  %+  weld
-            `(list @ux)`[0x0 ;;((list @ux) "asm")]        ::  binary magic
-          `(list @ux)`~[0x1 0x0 0x0 0x0]                   ::  Wasm version
+            `(list @ux)`[0x0 ((list @ux) "asm")]  ::  binary magic
+          `(list @ux)`~[0x1 0x0 0x0 0x0]            ::  Wasm version
   =.  wasm-bytes  (slag 8 wasm-bytes)
   =|  out=module
   |-  ^-  module
@@ -39,15 +40,14 @@
   ?~  bytes  *type-section
   =|  out=type-section
   =/  num-types=@  i.bytes
-  =.  num-types.out  num-types
   =/  type-bytes=(list @ux)  t.bytes
   |-  ^-  type-section
-  ?:  =(~ type-bytes)  out(types (flop types.out))
-  :: ?>  =((snag 0 type-bytes) %0x60)
-  :: $(types.out [(get-func-type t.type-bytes) types.out])
+  ?:  =(~ type-bytes)
+    ?>  =(num-types (lent out))
+    (flop out)
   =^  =func-type  type-bytes
     (get-func-type type-bytes)
-  $(types.out [func-type types.out])
+  $(out [func-type out])
 ::
 ++  get-func-type
   |=  bytes=(list @ux)
@@ -55,13 +55,14 @@
   ?>  =((snag 0 bytes) %0x60)
   =.  bytes  (slag 1 bytes)
   =|  out=func-type
-  =.  num-params.out  (snag 0 bytes)
-  =.  params.out  (turn (swag [1 num-params.out] bytes) get-valtype)
-  =.  num-results.out  (snag (add 1 num-params.out) bytes)
-  =.  results.out  (turn (swag [(add 2 num-params.out) num-results.out] bytes) get-valtype)
-  ?>  =(num-results.out (lent results.out))
+  =/  num-params=@  (snag 0 bytes)
+  =.  params.out  (turn (swag [1 num-params] bytes) get-valtype)
+  =/  num-results=@  (snag (add 1 num-params) bytes)
+  =.  results.out  (turn (swag [(add 2 num-params) num-results] bytes) get-valtype)
+  ?>  =(num-results (lent results.out))
+  ?>  =(num-params (lent params.out))
   :-  out
-  (slag :(add 2 num-params.out num-results.out) bytes)
+  (slag :(add 2 num-params num-results) bytes)
 ::
 ++  get-valtype
   |=  byte=@ux
@@ -77,10 +78,9 @@
   |=  bytes=(list @ux)
   ^-  function-section
   ?~  bytes  *function-section
-  =|  out=function-section
-  =.  num-functions.out  i.bytes
-  =.  function-types.out  t.bytes
-  ?>  =(num-functions.out (lent function-types.out))
+  =/  num-functions=@  i.bytes
+  =/  out=function-section  ((list u32) t.bytes)
+  ?>  =(num-functions (lent out))
   out
 ::
 ++  get-export-section
@@ -93,11 +93,10 @@
   ?:  =(0 num-exports)
     ?>  =(~ exports-bytes)
     out
-  =.  num-exports.out  num-exports
   |-  ^-  export-section
   ?:  =(~ exports-bytes)
     ?>  =(0 num-exports)
-    out
+    (flop out)
   =/  length-name=@  (snag 0 exports-bytes)
   =/  one-export-bytes=(list @ux)  (swag [1 (add 2 length-name)] exports-bytes)
   ?>  =((add 2 length-name) (lent one-export-bytes))
@@ -110,8 +109,7 @@
   =/  export-index-byte=@ux  (snag (add 1 length-name) one-export-bytes)
   %=  $
     exports-bytes  (slag (add 3 length-name) exports-bytes)
-    exports.out
-      (~(put by exports.out) name %func export-index-byte)
+    out  [[name %func (u32 export-index-byte)] out]
     num-exports    (dec num-exports)
   ==
 ::
@@ -120,30 +118,29 @@
   ^-  code-section
   ?~  bytes  *code-section
   =|  out=code-section
-  =.  num-functions.out  i.bytes
-  =/  num-functions=@  i.bytes
-  =/  functions-bytes=(list @ux)  t.bytes
+  =/  num-codes=@  i.bytes
+  =/  codes-bytes=(list @ux)  t.bytes
   |-  ^-  code-section
-  ?:  =(~ functions-bytes)
-    ?>  =(num-functions 0)
-    out(functions (flop functions.out))
-  =/  one-function-length=@  (snag 0 functions-bytes)
-  =/  one-function-bytes=(list @ux)
+  ?:  =(~ codes-bytes)
+    ?>  =(num-codes 0)
+    (flop out)
+  =/  one-code-length=@  (snag 0 codes-bytes)
+  =/  one-code-bytes=(list @ux)
     %+  scag
-      one-function-length
-    (slag 1 functions-bytes)
-  ?>  =(one-function-length (lent one-function-bytes))
+      one-code-length
+    (slag 1 codes-bytes)
+  ?>  =(one-code-length (lent one-code-bytes))
   %=  $
-    num-functions    (dec num-functions)
-    functions-bytes  (slag (add 1 one-function-length) functions-bytes)
-    functions.out    [(get-code one-function-bytes) functions.out]
+    num-codes    (dec num-codes)
+    codes-bytes  (slag (add 1 one-code-length) codes-bytes)
+    out          [(get-code one-code-bytes) out]
   ==
 ::
 ++  get-code
   |=  bytes=(list @ux)
-  ^-  function-body
-  ?~  bytes  *function-body
-  =|  out=function-body
+  ^-  code
+  ?~  bytes  *code
+  =|  out=code
   =/  locals-number=@  i.bytes
   =?  locals.out  !=(0 locals-number)
     =/  locals-bytes=(list @ux)  (scag (mul 2 locals-number) t.bytes)
@@ -167,29 +164,29 @@
   ^-  (list expression)
   ?:  =(~ bytes)  ~
   ?+    bytes  ~|(bytes !!)
-      [op=?(%0x6a %0xb) rest=*]     ::  no immediate args
+      [op=bin-opcodes-zero-args rest=*]     ::  no immediate args
     =,  bytes
     [(parse-zero op) $(bytes rest)]
   ::
-      [op=?(%0x20 %0x21) arg=@ux rest=*]  ::  one immediate arg
+      [op=bin-opcodes-one-arg arg=@ux rest=*]  ::  one immediate arg
     =,  bytes
     [(parse-one op arg) $(bytes rest)]
   ==
 ::
 ++  parse-zero
-  |=  op=?(%0x6a %0xb)
+  |=  op=bin-opcodes-zero-args
   ^-  expression
-  ?-  op
-    %0x6a  [%i32-add ~]
+  ?+  op  !!
+    %0x6a  [%add %i32]  ::[%i32-add ~]
     %0xb  [%end ~]
   ==
 ::
 ++  parse-one
-  |=  [op=?(%0x20 %0x21) arg=@ux]
+  |=  [op=bin-opcodes-one-arg arg=@ux]
   ^-  expression
-  ?-  op
-    %0x20  [%local-get arg]
-    %0x21  [%local-set arg]
+  ?+  op  !!
+    %0x20  [%local-get (u32 arg)]
+    %0x21  [%local-set (u32 arg)]
   ==
 ::
 --
