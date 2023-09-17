@@ -1,3 +1,6 @@
+::  HWasm AST definition and binary opcode classification
+::::  /hoon/wasm/sur
+  ::
 |%
 +$  valtype
   $?  %f64
@@ -5,6 +8,8 @@
       %f32
       %i32
   ==
+::  Wasm valtype-like molds
+::
 +$  u32
   $+  u32
   $|  @
@@ -20,13 +25,17 @@
 +$  f32  @rs
 +$  f64  @rd
 ::
+::  Module definition
 +$  module
   $:
     type-section=(unit type-section)
     function-section=(unit function-section)
     export-section=(unit export-section)
     code-section=(unit code-section)
+  ::  ...   TODO add other sections, add fields for globals + imports
   ==
+::  Definitions of sections
+::
 ::  Type section
 ::
 +$  type-section
@@ -182,13 +191,12 @@
   $+  memarg
   [align=u32 offset=u32]
 ::
-::  Opcodes:
+::  Binary opcode classification
 ::
 +$  opcode  $?  bin-opcodes-zero-args
                 bin-opcodes-one-arg
                 bin-opcodes-two-args
                 bin-opcodes-blocks
-                pseudo-opcode
             ==
 ::
 +$  bin-opcodes-zero-args

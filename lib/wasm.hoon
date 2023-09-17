@@ -1,3 +1,8 @@
+::  AST interpreter utilities
+::  Call: (draft-interpret-module func-name=@t =module input-params=(list @))
+::
+::::  /hoon/wasm/lib
+  ::
 /-  *wasm
 |%
 ++  draft-interpret-func
@@ -55,7 +60,7 @@
   ==
 ::
 ++  draft-interpret-module
-  |=  [export-func=@tas =module params=(list @)]
+  |=  [export-func=@t =module params=(list @)]
   ::  resolve name
   ::
   =/  =export-section  (get-export-section module)

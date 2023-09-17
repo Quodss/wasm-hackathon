@@ -1,7 +1,8 @@
-::  /lib/wasm-to-ast.hoon
 ::  .wasm -> AST transformer
-::  (main:wasm-to-ast wasm-file) returns AST representation of the module
+::  (main:wasm-to-ast wasm-file=@) returns AST representation of the module
 ::
+::::  /hoon/wasm-to-ast/lib
+  ::
 /-  *wasm
 |%
 ++  main
@@ -12,7 +13,10 @@
       .=  (scag 8 wasm-bytes)
       ^~  %+  weld
             `(list @ux)`[0x0 ((list @ux) "asm")]  ::  binary magic
-          `(list @ux)`~[0x1 0x0 0x0 0x0]            ::  Wasm version
+          `(list @ux)`~[0x1 0x0 0x0 0x0]          ::  Wasm version
+  ::
+  ::  Wasm binary is a vector of [section-code=@ux section-size=@ux section-bytes=(list @ux)]
+  ::
   =.  wasm-bytes  (slag 8 wasm-bytes)
   =|  out=module
   |-  ^-  module
@@ -27,9 +31,11 @@
     (weld section-bytes (reap (sub section-size (lent section-bytes)) 0x0))
   =.  out
     ?+  section-code  out
-      %0x1   out(type-section `(get-type-section section-bytes))
-      %0x3   out(function-section `(get-function-section section-bytes))
-      %0x7   out(export-section `(get-export-section section-bytes))
+    ::  each section is found only once in the binary file
+    ::
+      %0x1  out(type-section `(get-type-section section-bytes))
+      %0x3  out(function-section `(get-function-section section-bytes))
+      %0x7  out(export-section `(get-export-section section-bytes))
       %0xa  out(code-section `(get-code-section section-bytes))
     ==
   $(wasm-bytes (slag section-size t.t.wasm-bytes))
@@ -164,7 +170,7 @@
   ^-  (list expression)
   ?:  =(~ bytes)  ~
   ?+    bytes  ~|(bytes !!)
-      [op=bin-opcodes-zero-args rest=*]     ::  no immediate args
+      [op=bin-opcodes-zero-args rest=*]        ::  no immediate args
     =,  bytes
     [(parse-zero op) $(bytes rest)]
   ::
