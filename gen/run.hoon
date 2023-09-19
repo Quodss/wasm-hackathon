@@ -3,14 +3,14 @@
 /-  *wasm
 /+  wasm
 /+  wasm-to-ast
-/*  addtwo-wasm  %wasm  /add-two/wasm
+/*  two-functions-wasm  %wasm  /two-functions/wasm
 :-  %say  |=  *  :-  %noun
 ::  end-to-end Wasm module interpretation
 :: 
-%^    draft-interpret-module.wasm
+%^    call-exported-function.wasm
     'addTwo'
-  (main:wasm-to-ast addtwo-wasm)
-~[10 2]
+  (main:wasm-to-ast two-functions-wasm)
+~[30 50]
 
 
 

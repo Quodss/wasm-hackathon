@@ -33,10 +33,10 @@
     ?+  section-code  out
     ::  each section is found only once in the binary file
     ::
-      %0x1  out(type-section `(get-type-section section-bytes))
-      %0x3  out(function-section `(get-function-section section-bytes))
-      %0x7  out(export-section `(get-export-section section-bytes))
-      %0xa  out(code-section `(get-code-section section-bytes))
+      %0x1  out(type-section (get-type-section section-bytes))
+      %0x3  out(function-section (get-function-section section-bytes))
+      %0x7  out(export-section (get-export-section section-bytes))
+      %0xa  out(code-section (get-code-section section-bytes))
     ==
   $(wasm-bytes (slag section-size t.t.wasm-bytes))
 ::
@@ -191,8 +191,10 @@
   |=  [op=bin-opcodes-one-arg arg=@ux]
   ^-  expression
   ?+  op  !!
+    %0x10  [%call (u32 arg)]
     %0x20  [%local-get (u32 arg)]
     %0x21  [%local-set (u32 arg)]
+    %0x41  [%const %i32 (u32 arg)]
   ==
 ::
 --

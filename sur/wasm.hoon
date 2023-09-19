@@ -25,13 +25,20 @@
 +$  f32  @rs
 +$  f64  @rd
 ::
++$  dime-wasm
+  $%  [type=%i32 n=u32]
+      [type=%i64 n=u64]
+      [type=%f32 n=f32]
+      [type=%f64 n=f64]
+  ==
+::
 ::  Module definition
 +$  module
   $:
-    type-section=(unit type-section)
-    function-section=(unit function-section)
-    export-section=(unit export-section)
-    code-section=(unit code-section)
+    =type-section
+    =function-section
+    =export-section
+    =code-section
   ::  ...   TODO add other sections, add fields for globals + imports
   ==
 ::  Definitions of sections
@@ -130,12 +137,7 @@
     [%memory-grow mem-id=%0x0]
     ::  Numeric instructions
     ::
-    $:  %const
-        $%  [type=%i32 n=u32]
-            [type=%i64 n=u64]
-            [type=%f32 n=f32]
-            [type=%f64 n=f64]
-    ==  ==
+    [%const dime-wasm]
     ::::  comparison:
     ::::
     [%eqz type=?(%i32 %i64)]
