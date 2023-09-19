@@ -151,8 +151,8 @@
   =?  locals.out  !=(0 locals-number)
     =/  locals-bytes=(list @ux)  (scag (mul 2 locals-number) t.bytes)
     (unpack-locals-vector locals-bytes)
-  =/  expressions-bytes=(list @ux)  (slag (mul 2 locals-number) t.bytes)
-  out(expressions (parse-expressions expressions-bytes))
+  =/  instructions-bytes=(list @ux)  (slag (mul 2 locals-number) t.bytes)
+  out(expression (parse-instructions instructions-bytes))
 ::
 ++  unpack-locals-vector
   |=  bytes=(pole @ux)
@@ -165,9 +165,9 @@
   =,  bytes
   (weld (reap type-count type) $(bytes rest))
 ::
-++  parse-expressions
+++  parse-instructions
   |=  bytes=(pole @ux)
-  ^-  (list expression)
+  ^-  (list instruction)
   ?:  =(~ bytes)  ~
   ?+    bytes  ~|(bytes !!)
       [op=bin-opcodes-zero-args rest=*]        ::  no immediate args
@@ -181,7 +181,7 @@
 ::
 ++  parse-zero
   |=  op=bin-opcodes-zero-args
-  ^-  expression
+  ^-  instruction
   ?+  op  !!
     %0x6a  [%add %i32]  ::[%i32-add ~]
     %0xb  [%end ~]
@@ -189,7 +189,7 @@
 ::
 ++  parse-one
   |=  [op=bin-opcodes-one-arg arg=@ux]
-  ^-  expression
+  ^-  instruction
   ?+  op  !!
     %0x10  [%call (u32 arg)]
     %0x20  [%local-get (u32 arg)]

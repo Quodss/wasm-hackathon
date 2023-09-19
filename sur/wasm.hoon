@@ -82,21 +82,21 @@
 ::
 +$  code
   $:  locals=(list valtype)
-      expressions=(list expression)
+      expression=(list instruction)
   ==
 ::
-+$  expression
++$  instruction
   $%
     ::  Control instructions
     ::
     [%unreachable ~]
     [%nop ~]
-    [%block result-type=(list valtype) body=(list expression)]
-    [%loop result-type=(list valtype) body=(list expression)]
+    [%block result-type=(list valtype) body=(list instruction)]
+    [%loop result-type=(list valtype) body=(list instruction)]
     $:  %if
         result-type=(list valtype)
-        branch-true=(list expression)
-        branch-false=(list expression)
+        branch-true=(list instruction)
+        branch-false=(list instruction)
     ==
   ::
     [%br label=@]

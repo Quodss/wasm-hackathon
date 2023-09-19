@@ -39,34 +39,34 @@
     ::  initialize stack
     ::
     =|  stack=(pole @)
-    =/  expressions  expressions.code
+    =/  expression  expression.code
     ::  loop through the instructions
     ::
     =;  out=(pole @)
       ?>  =((lent out) (lent results.func-type))
       out
     |-  ^-  (pole @)
-    ?~  expressions  stack
-    =+  (apply-instruction i.expressions stack locals)  ::  [new-stack new-locals]
+    ?~  expression  stack
+    =+  (apply-instruction i.expression stack locals)  ::  [new-stack new-locals]
     %=  $
-      expressions  t.expressions
+      expression  t.expression
       stack        new-stack
       locals       new-locals
     ==
   ::
   ++  apply-instruction
-    |=  [=expression stack=(pole @) locals=(list @)]
+    |=  [=instruction stack=(pole @) locals=(list @)]
     ^-  [new-stack=(pole @) new-locals=(list @)]
-    ?+  expression  !!
+    ?+  instruction  !!
     ::
         [%local-get index=u32]
       :_  locals
-      [(snag index.expression locals) stack]
+      [(snag index.instruction locals) stack]
     ::
         [%local-set index=u32]
       ?~  stack  !!
       :-  +.stack
-      (snap locals index.expression -.stack)
+      (snap locals index.instruction -.stack)
     ::
         [%add %i32]
       ?+    stack  !!
@@ -80,16 +80,16 @@
       [stack locals]
     ::
         [%call func-id=u32]
-      =/  func-type-id=@  (snag func-id.expression function-section)
+      =/  func-type-id=@  (snag func-id.instruction function-section)
       =/  =func-type  (snag func-type-id type-section)
       =/  len-params=@  (lent params.func-type)
       =/  params=(list @)  (scag len-params stack)
       :_  locals
-      (weld (call-func-id func-id.expression params) (slag len-params stack))
+      (weld (call-func-id func-id.instruction params) (slag len-params stack))
     ::
         [%const *]
       :_  locals
-      (handle-const stack expression)
+      (handle-const stack instruction)
     ==
   ::
   ++  handle-const
