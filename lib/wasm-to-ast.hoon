@@ -291,8 +291,15 @@
       ;~(plug instr this)  ::  parse one instr at a time
     ==
   ::
-  ++  end  (just '\0b')
-  ++  else  (just '\05')
+  ++  end        (just '\0b')
+  ++  else       (just '\05')
+  ++  const-i64  (just '\42')
+  ++  const-f32  (just '\43')
+  ++  const-f64  (just '\44')
+  ++  br-table   (just '\0e')
+  ++  block-op   (just '\02')
+  ++  loop-op    (just '\03')
+  ++  if-op      (just '\04')
   ::  parse an instruction
   ::
   ++  instr
@@ -315,13 +322,13 @@
       ;~(plug (mask mask-one-i32) (i-n 32))
     ::
       %+  cook  handle-const-i64
-      ;~(plug (just '\42') (i-n 64))
+      ;~(plug const-i64 (i-n 64))
     ::
       %+  cook  handle-const-f32
-      ;~(plug (just '\43') f32)
+      ;~(plug const-f32 f32)
     ::
       %+  cook  handle-const-f64
-      ;~(plug (just '\44') f64)
+      ;~(plug const-f64 f64)
     ==
   ::
   ++  instr-two
@@ -330,24 +337,24 @@
       ;~(plug (mask mask-two-i32) (i-n 32) (i-n 32))
     ::
       %+  cook  handle-br-table
-      ;~(plug (just '\0e') vec-i-32 (i-n 32))
+      ;~(plug br-table vec-i-32 (i-n 32))
     ==
   ::
   ++  block
     %+  cook  handle-block
-    ;~(pfix (just '\02') ;~(plug next expression-end))
+    ;~(pfix block-op ;~(plug next expression-end))
   ::
   ++  loop
     %+  cook  handle-loop
-    ;~(pfix (just '\03') ;~(plug next expression-end))
+    ;~(pfix loop-op ;~(plug next expression-end))
   ::
   ++  if
     %+  cook  handle-if
-    ;~(pfix (just '\04') ;~(plug next expression-end))
+    ;~(pfix if-op ;~(plug next expression-end))
   ::
   ++  if-else
     %+  cook  handle-if-else
-    ;~(pfix (just '\04') ;~(plug next expression-else expression-end))
+    ;~(pfix if-op ;~(plug next expression-else expression-end))
   ::
   ::  All handle-X functions must return `instruction` type
   ::
