@@ -306,7 +306,7 @@
       if-else
     ==
   ::
-  ::  Instruction parsers. TODO: define masks
+  ::  Instruction parsers
   ::
   ++  instr-zero  (cook handle-zero-args (mask mask-zero))
   ++  instr-one
@@ -353,12 +353,9 @@
   ::
   ++  mask-zero
     ^~
-    =/  op=char  '\00'
-    |-  ^-  (list char)
-    ?:  =(op 256)  ~
-    ?.  ?=(bin-opcodes-zero-args op)
-      $(op +(op))
-    [op $(op +(op))]
+    %+  skim  (gulf '\00' '\ff')
+    |=  op=char
+    ?=(bin-opcodes-zero-args op)
   ::
   ++  handle-zero-args
     |=  op=char
@@ -377,15 +374,12 @@
     ==
   ++  mask-one-i32
     ^~
-    =/  op=char  '\00'
-    |-  ^-  (list char)
-    ?:  =(op 256)  ~
-    ?.  ?&  ?=(bin-opcodes-one-arg op)
-            !(~(has in (silt mask-one-64)) op)
-            !=(op '\42')
-        ==
-      $(op +(op))
-    [op $(op +(op))]
+    %+  skim  (gulf '\00' '\ff')
+    |=  op=char
+    ?&  ?=(bin-opcodes-one-arg op)
+        !(~(has in (silt mask-one-64)) op)
+        !=(op '\43')
+    ==
   ::
   ++  handle-one-arg-i32
     |=  [op=char arg=@]
@@ -399,14 +393,11 @@
   ::
   ++  mask-two-i32
     ^~
-    =/  op=char  '\00'
-    |-  ^-  (list char)
-    ?:  =(op 256)  ~
-    ?.  ?&  ?=(bin-opcodes-two-args op)
-            !=(op '\0e')
-        ==
-      $(op +(op))
-    [op $(op +(op))]
+    %+  skim  (gulf '\00' '\ff')
+    |=  op=char
+    ?&  ?=(bin-opcodes-two-args op)
+        !=(op '\0e')
+    ==
   ::
   ++  handle-two-args-i32
     |=  [op=char arg1=@ arg2=@]
