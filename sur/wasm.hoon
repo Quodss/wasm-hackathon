@@ -199,6 +199,7 @@
                 bin-opcodes-one-arg
                 bin-opcodes-two-args
                 bin-opcodes-blocks
+                pseudo-opcode
             ==
 ::
 +$  bin-opcodes-zero-args
@@ -212,7 +213,7 @@
     xor-opcodes  shl-opcodes  shr-opcodes  rotl-opcodes  rotr-opcodes
     abs-opcodes  neg-opcodes  ceil-opcodes  floor-opcodes  trunc-opcodes
     nearest-opcodes  sqrt-opcodes  min-opcodes  max-opcodes  copysign-opcodes
-    extend-opcodes  convert-opcodes  reinterpret-opcodes  pseudo-opcode
+    extend-opcodes  convert-opcodes  reinterpret-opcodes
   ==
 ::
 +$  pseudo-opcode  ?(%0x5 %0xb)  ::  else, end
