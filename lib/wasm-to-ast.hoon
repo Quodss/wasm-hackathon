@@ -114,7 +114,7 @@
   ^-  function-section
   ?:  =(~ bytes)  *function-section
   =^  num-functions=@  bytes  (snip-u-n bytes 32)
-  =/  out=function-section  ((list u32) bytes)
+  =/  out=function-section  ((list @) bytes)
   ?>  =(num-functions (lent out))
   out
 ::
@@ -123,7 +123,7 @@
   ^-  export-section
   ?:  =(~ bytes)  *export-section
   =|  out=export-section
-  =^  num-exports=u32  bytes  (snip-u-n bytes 32)
+  =^  num-exports=@  bytes  (snip-u-n bytes 32)
   =/  exports-bytes=(list @ux)  bytes
   ?:  =(0 num-exports)
     ?>  =(~ exports-bytes)
@@ -132,16 +132,16 @@
   ?:  =(~ exports-bytes)
     ?>  =(0 num-exports)
     (flop out)
-  =^  length-name=u32  exports-bytes  (snip-u-n exports-bytes 32)
+  =^  length-name=@  exports-bytes  (snip-u-n exports-bytes 32)
   =/  name=@t
     %-  crip
     ;;  tape
     (scag length-name exports-bytes)
   =/  export-desc-byte=@ux  (snag length-name exports-bytes)
   ?>  =(export-desc-byte %0x0)
-  =^  export-index-byte=u32  exports-bytes  (snip-u-n (slag +(length-name) exports-bytes) 32)
+  =^  export-index-byte=@  exports-bytes  (snip-u-n (slag +(length-name) exports-bytes) 32)
   %=  $
-    out  [[name %func (u32 export-index-byte)] out]
+    out  [[name %func export-index-byte] out]
     num-exports    (dec num-exports)
   ==
 ::
@@ -150,13 +150,13 @@
   ^-  code-section
   ?:  =(~ bytes)  *code-section
   =|  out=code-section
-  =^  num-codes=u32  bytes  (snip-u-n bytes 32)
+  =^  num-codes=@  bytes  (snip-u-n bytes 32)
   =/  codes-bytes=(list @ux)  bytes
   |-  ^-  code-section
   ?:  =(~ codes-bytes)
     ?>  =(num-codes 0)
     (flop out)
-  =^  one-code-length=u32  codes-bytes  (snip-u-n codes-bytes 32)
+  =^  one-code-length=@  codes-bytes  (snip-u-n codes-bytes 32)
   =/  one-code-bytes=(list @ux)
     (scag one-code-length codes-bytes)
   ?>  =(one-code-length (lent one-code-bytes))
@@ -172,7 +172,7 @@
   ?:  =(~ bytes)  *code
   |^
   =|  out=code
-  =^  locals-number=u32  bytes  (snip-u-n bytes 32)
+  =^  locals-number=@  bytes  (snip-u-n bytes 32)
   =^  locals=(list valtype)  bytes  (handle-locals locals-number bytes)
   out(expression (parse-instructions bytes), locals locals)
   ::
@@ -181,7 +181,7 @@
     ^-  [(list valtype) (list @ux)]
     ?:  =(locals-number 0)
       [~ bytes]
-    =^  valtype-number=u32  bytes  (snip-u-n bytes 32)
+    =^  valtype-number=@  bytes  (snip-u-n bytes 32)
     ?~  bytes  !!
     =/  v=valtype  (get-valtype i.bytes)
     =^  rest-locals=(list valtype)  t.bytes
@@ -191,14 +191,14 @@
   ::
   --
 ::
-  ++  parse-instructions
+++  parse-instructions
   |=  bytes=(pole @ux)
   ^-  (list instruction)
   |^
   (scan (tape bytes) expression-end)
   ::  Functional parser utils for expression parsing
   ::
-  ::  ++i-n: parse n-bit integer
+  ::  ++i-n: parse n-bit unsigned integer 
   ::
   ++  i-n
     |=  n-bits=@
@@ -267,29 +267,19 @@
     ?~  b  ~
     :-  [i.a i.b]
     $(a t.a, b t.b)
-::
+  ::
   ::  parse an expression that ends with `end` (0xb)
   ::
   ++  expression-end
-    |-
-    =*  this  $
     %+  knee  *(list instruction)
     |.  ~+
-    ;~  pose
-      (cold ~ end)         ::  just end
-      ;~(plug instr this)  ::  parse one instr at a time
-    ==
+    ;~(sfix (star instr) end)
   ::  parse an expression that ends with `else` (0x5)
   ::
   ++  expression-else
-    |-
-    =*  this  $
     %+  knee  *(list instruction)
     |.  ~+
-    ;~  pose
-      (cold ~ else)         ::  just else
-      ;~(plug instr this)  ::  parse one instr at a time
-    ==
+    ;~(sfix (star instr) else)
   ::
   ++  end        (just '\0b')
   ++  else       (just '\05')
@@ -307,10 +297,10 @@
       instr-zero
       instr-one
       instr-two
+      if-else
       block
       loop
       if
-      if-else
     ==
   ::
   ::  Instruction parsers

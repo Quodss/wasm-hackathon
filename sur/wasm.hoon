@@ -8,31 +8,17 @@
       %f32
       %i32
   ==
-::  Wasm valtype-like molds
 ::
-+$  u32
-  $+  u32
-  $|  @
-  |=  i=@
-  (lth i (bex 32))
-::
-+$  u64
-  $+  u64
-  $|  @
-  |=  i=@
-  (lth i (bex 64))
-::
-+$  f32  @rs
-+$  f64  @rd
-::
-+$  dime-wasm
-  $%  [type=%i32 n=u32]
-      [type=%i64 n=u64]
-      [type=%f32 n=f32]
-      [type=%f64 n=f64]
++$  coin-wasm
+  $%  [type=%i32 n=@]
+      [type=%i64 n=@]
+      [type=%f32 n=@rs]
+      [type=%f64 n=@rd]
+  ::  ...  TODO: add v128?
   ==
 ::
 ::  Module definition
+::
 +$  module
   $:
     =type-section
@@ -57,7 +43,7 @@
 ::
 +$  function-section
   $+  function-section
-  (list type-id=u32)
+  (list type-id=@)
 ::
 ::  Export section
 ::
@@ -68,10 +54,10 @@
 +$  export  [name=@t =export-desc]
 ::
 +$  export-desc
-  $%  [%func i=u32]
-      [%table i=u32]
-      [%memory i=u32]
-      [%global i=u32]
+  $%  [%func i=@]
+      [%table i=@]
+      [%memory i=@]
+      [%global i=@]
   ==
 ::
 ::  Code section
@@ -101,10 +87,10 @@
   ::
     [%br label=@]
     [%br-if label=@]
-    [%br-table label-vec=(list u32) label-default=@]
+    [%br-table label-vec=(list @) label-default=@]
     [%return ~]
-    [%call func-id=u32]
-    [%call-indirect type-id=u32 table-id=%0x0]
+    [%call func-id=@]
+    [%call-indirect type-id=@ table-id=%0x0]
     [%end ~]
     [%else ~]
     ::  Parametric instructions
@@ -113,11 +99,11 @@
     [%select ~]
     ::  Variable instructions
     ::
-    [%local-get index=u32]
-    [%local-set index=u32]
-    [%local-tee index=u32]
-    [%global-get index=u32]
-    [%global-set index=u32]
+    [%local-get index=@]
+    [%local-set index=@]
+    [%local-tee index=@]
+    [%global-get index=@]
+    [%global-set index=@]
     ::  Memory instructions
     ::
     $:  %load
@@ -137,7 +123,7 @@
     [%memory-grow mem-id=%0x0]
     ::  Numeric instructions
     ::
-    [%const dime-wasm]
+    [%const p=coin-wasm]
     ::::  comparison:
     ::::
     [%eqz type=?(%i32 %i64)]
@@ -191,7 +177,12 @@
 ::
 +$  memarg
   $+  memarg
-  [align=u32 offset=u32]
+  [align=@ offset=@]
+::
+::  Interpreter types
+::
++$  stack  [p=(unit branch) q=(pole coin-wasm)]
++$  branch  [%branch label=@]
 ::
 ::  Binary opcode classification
 ::
