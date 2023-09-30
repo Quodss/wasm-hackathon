@@ -200,7 +200,7 @@
   ::
   ::  ++i-n: parse n-bit unsigned integer 
   ::
-  ++  i-n
+  ++  i-n  ::  parse u32 -> (i-n 32)
     |=  n-bits=@
     =*  this  $
     %+  knee  *@
@@ -241,6 +241,30 @@
       |=  n=@
       (stun [n n] (cook ,@ (i-n 32)))
     ==
+  ::
+  ++  vec           ::  vec-i-32 == (vec (i-n 32))
+    |*  rul=rule
+    ;~  bild
+      (i-n 32)
+      |=  n=@
+      (stun [n n] rul)
+    ==
+  ::
+  ++  limits-parser
+    %+  cook  limits
+    ;~
+      pose
+      ;~(plug (just '\00') (i-n 32))
+      ;~(plug (just '\01') (i-n 32) (i-n 32))
+    ==
+  ::
+  :: ++  memory-section-parser
+  ::   %+  cook  memory-section
+  ::   ;~
+  ::     pfix
+  ::     (just '\05')
+  ::     (vec limits-parser)
+  ::   ==
   ::
   ++  f64
     %+  cook
@@ -357,8 +381,11 @@
   ++  handle-zero-args
     |=  op=char
     ^-  instruction
-    ?+  op  ~|(op !!)
+    ?+  op  ~|(`@ux`op !!)
       %0x6a  [%add %i32]
+      %0x6c  [%mul %i32]
+      %0x47  [%ne %i32]
+      %0x48  [%lt %i32 `%s]
       %0x63  [%lt %f64 ~]
       %0xa1  [%sub %f64]
       %0xa2  [%mul %f64]
@@ -381,10 +408,12 @@
   ++  handle-one-arg-i32
     |=  [op=char arg=@]
     ^-  instruction
-    ?+  op  !!
+    ?+  op  ~|(`@ux`op !!)
+      %0xd   [%br-if arg]
       %0x10  [%call arg]
       %0x20  [%local-get arg]
       %0x21  [%local-set arg]
+      %0x22  [%local-tee arg]
       %0x41  [%const %i32 arg]
     ==
   ::

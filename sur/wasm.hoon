@@ -17,6 +17,10 @@
   ::  ...  TODO: add v128?
   ==
 ::
++$  limits
+  $%  [%0 @]
+      [%1 @ @]
+  ==
 ::  Module definition
 ::
 +$  module
@@ -182,7 +186,7 @@
 ::  Interpreter types
 ::
 +$  stack  [p=(unit branch) q=(pole coin-wasm)]
-+$  branch  [%branch label=@]
++$  branch  @  ::  label of br; number of jumps
 ::
 ::  Binary opcode classification
 ::
