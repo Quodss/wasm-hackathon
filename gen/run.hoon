@@ -10,4 +10,3 @@
 ::
 =>  (instantiate:ast-interpreter (main:wasm-to-ast bin-wasm))
 (call-id (find-func-id 'factorial' module) ~[[%i32 10]])
-::
