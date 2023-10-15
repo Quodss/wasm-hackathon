@@ -54,11 +54,27 @@
   ::  This is where globally available structures are defined: globals, memory,
   ::  imports, start function application etc. Returns core for module handling
   ::
-  ::  =+  state  ...
+  =+  :*  buffer=0
+          n-pages=`@`?:(?=(@ memory-section.module) 0 min.i.memory-section.module)
+          max-pages=`(unit @)`?:(?=(@ memory-section.module) `0 max.i.memory-section.module)
+          table=`(list @)`~  ::  XX actually incorrect, deal with this later
+
+      ==
+  =*  state-global  -
+  ::  instantiate table
+  ::
+  =?  table  ?=(^ elem-section.module)
+    ?>  ?=(@ t.elem-section.module)
+    =*  elem  i.elem-section.module
+    ?>  ?=([[%const [%i32 @]] ~] offset.elem)  ::  XX the DIRTIEST hack, to be fixed
+    ~!  elem
+    (weld (reap n.p.i.offset.elem 0) y.elem)
   ::
   |%
+  ++  this  .
   ++  call-id
     |=  [func-id=@ input-params=(list coin-wasm)]
+    ^-  [(list coin-wasm) _this]
     =/  =func-type  (snag (snag func-id function-section) type-section)
     =/  =code  (snag func-id code-section)
     =/  expression  expression.code
@@ -68,7 +84,9 @@
     ::  Initialize locals:
     ::
     =/  locals=(list coin-wasm)  (weld input-params (mint locals.code))
-    =/  out=stack  return:reduce:(hwasm-instance func-type locals expression)
+    :: =/  out=stack  return:reduce:(hwasm-instance func-type locals expression)
+    =/  reduced  reduce:(hwasm-instance func-type locals expression)
+    =/  out=stack  return:reduced
     ::  Assert: no branch or branch with label 0
     ::
     ?>  |(?=(~ p.out) =(0 u.p.out))
@@ -79,7 +97,7 @@
       ~|  [(get-types q.out) results.func-type]
       ~|  q.out
       !!
-    q.out
+    [q.out this(state-global state-global:reduced)]
   ::  +hwasm-instance: core for expression computation
   ::
   ++  hwasm-instance
@@ -148,8 +166,27 @@
           %-  flop  ::  reversed order of operands in the stack
           (scag (lent params.subfunc-type) q.s)
         ?>  =((get-types input-values) params.subfunc-type)
-        =/  out=(list coin-wasm)  (call-id func-id input-values)
-        this(q.s (weld (flop out) (slag (lent params.subfunc-type) q.s)))
+        =+  [out instance]=(call-id func-id input-values)
+        %=  this
+          q.s  (weld (flop out) (slag (lent params.subfunc-type) q.s))
+          state-global  state-global:instance
+        ==
+      ::
+          [%call-indirect type-id=@ table-id=%0x0]
+        ?>  ?=([func-table-index=coin-wasm rest=*] q.s)
+        =,  instruction
+        =,  q.s
+        =/  subfunc-type=func-type
+          (snag type-id type-section)
+        =/  input-values=(list coin-wasm)
+          %-  flop  ::  reversed order of operands in the stack
+          (scag (lent params.subfunc-type) rest)
+        ?>  =((get-types input-values) params.subfunc-type)
+        =+  [out instance]=(call-id (snag n.func-table-index table) input-values)
+        %=  this
+          q.s  (weld (flop out) (slag (lent params.subfunc-type) rest))
+          state-global  state-global:instance
+        ==
       ::
           [%const p=coin-wasm]
         =,  instruction
@@ -161,15 +198,36 @@
         =,  instruction
         this(q.s [(handle-lt type mode a b) rest])
       ::
+          [%gt type=valtype mode=(unit ?(%s %u))]
+        ?>  ?=([b=coin-wasm a=coin-wasm rest=*] q.s)
+        =,  q.s
+        =,  instruction
+        this(q.s [(handle-gt type mode a b) rest])
+      ::
+          [%le type=valtype mode=(unit ?(%s %u))]
+        ?>  ?=([b=coin-wasm a=coin-wasm rest=*] q.s)
+        =,  q.s
+        =,  instruction
+        this(q.s [(handle-le type mode a b) rest])
+      ::
           [%if *]
         ?>  ?=([a=[type=%i32 n=@] rest=*] q.s)
         =,  q.s
         =,  instruction
-        =/  new-stack=stack
+        =/  if-instance
           ?:  =(n.a 1)
-            return:reduce:this(s *stack, expression branch-true)
-          return:reduce:this(s *stack, expression branch-false)
-        this(p.s p.new-stack, q.s (weld q.new-stack rest))
+            reduce:this(s *stack, expression branch-true)
+          reduce:this(s *stack, expression branch-false)
+        =/  br=(unit branch)
+          ?~  p.s.if-instance  ~
+          ?:  =(0 u.p.s.if-instance)  ~
+          `(dec u.p.s.if-instance)
+        %=  this
+          p.s     br
+          q.s     (weld q.s.if-instance rest)
+          locals  locals.if-instance
+          state-global  state-global.if-instance
+        ==
       ::
           [%sub type=valtype]
         ?>  ?=([b=coin-wasm a=coin-wasm rest=*] q.s)
@@ -183,6 +241,12 @@
         =,  instruction
         this(q.s [(handle-mul type a b) rest])
       ::
+          [%div type=valtype mode=(unit ?(%s %u))]
+        ?>  ?=([b=coin-wasm a=coin-wasm rest=*] q.s)
+        =,  q.s
+        =,  instruction
+        this(q.s [(handle-div type mode a b) rest])
+      ::
           [%block ~ body=*]
         =,  instruction
         =/  block-instance  reduce:this(s *stack, expression body)
@@ -194,6 +258,7 @@
           p.s     br
           q.s     (weld q.s.block-instance q.s)
           locals  locals.block-instance
+          state-global  state-global.block-instance
         ==
       ::
           [%br label=@]
@@ -207,6 +272,14 @@
         ?:  =(n.a 1)
           this(p.s `label, q.s rest)
         this(q.s rest)
+      ::
+          [%br-table *]  ::  [%br-table label-vec=(list @) label-default=@]
+        ?>  ?=([a=[type=%i32 n=@] rest=*] q.s)
+        =,  instruction
+        =,  q.s
+        ?:  (gte n.a (lent label-vec))
+          this(p.s `label-default, q.s rest)
+        this(p.s `(snag n.a label-vec), q.s rest)
       ::
           [%loop ~ body=*]
         =,  instruction
@@ -222,6 +295,42 @@
           q.s     (weld q.s.loop-instance q.s)
           locals  locals.loop-instance
         ==
+      ::
+          [%store %i32 *]
+        ?>  ?=([content=[type=%i32 n=@] addr=[type=%i32 n=@] rest=*] q.s)
+        =,  q.s
+        =,  instruction
+        =/  i=@  (add n.addr offset.m)
+        ?>  (lth (add i 4) (mul 65.536 n-pages))
+        %=    this
+          q.s  rest
+            buffer
+          (sew bloq=3 [i size=4 n.content] buffer)
+        ==
+      ::
+          [%store %i64 *]
+        ?>  ?=([content=[type=%i64 n=@] addr=[type=%i32 n=@] rest=*] q.s)
+        =,  q.s
+        =,  instruction
+        =/  i=@  (add n.addr offset.m)
+        ?>  (lth (add i 8) (mul 65.536 n-pages))
+        %=    this
+          q.s  rest
+            buffer
+          (sew bloq=3 [i size=8 n.content] buffer)
+        ==
+      ::
+          [%load %i32 *]
+        ?>  ?=([addr=[type=%i32 n=@] rest=*] q.s)
+        =,  q.s
+        =,  instruction
+        =/  i=@  (add n.addr offset.m)
+        ?>  (lth (add i 4) (mul 65.536 n-pages))
+        %=    this
+            q.s
+          [[%i32 (cut 3 [i 4] buffer)] rest]
+        ==
+      ::
       ==
     --
   --
@@ -319,6 +428,57 @@
     ?:  (lth n.a n.b)
       1
     0
+  ==
+::
+++  handle-gt
+  |=  [type=valtype mode=(unit ?(%s %u)) a=coin-wasm b=coin-wasm]
+  ^-  coin-wasm
+  ?+    type  !!
+  ::
+      %f64
+    :-  %i32
+    ?>  &(?=(%f64 type.a) ?=(%f64 type.b))
+    ?:  (gth:rd n.a n.b)
+      1
+    0
+  ::
+      %i32
+    :-  %i32
+    ?>  &(?=(%i32 type.a) ?=(%i32 type.b))
+    ?:  (gth n.a n.b)
+      1
+    0
+  ==
+::
+++  handle-le
+  |=  [type=valtype mode=(unit ?(%s %u)) a=coin-wasm b=coin-wasm]
+  ^-  coin-wasm
+  ?+    type  !!
+  ::
+      %f64
+    :-  %i32
+    ?>  &(?=(%f64 type.a) ?=(%f64 type.b))
+    ?:  (lte:rd n.a n.b)
+      1
+    0
+  ::
+      %i32
+    :-  %i32
+    ?>  &(?=(%i32 type.a) ?=(%i32 type.b))
+    ?:  (lte n.a n.b)
+      1
+    0
+  ==
+::
+++  handle-div
+  |=  [type=valtype mode=(unit ?(%s %u)) a=coin-wasm b=coin-wasm]
+  ^-  coin-wasm
+  ?+    type  !!
+  ::
+      %f32
+    :-  %f32
+    ?>  &(?=(%f32 type.a) ?=(%f32 type.b))
+    (div:rs n.a n.b)
   ==
 ::
 ++  handle-ne

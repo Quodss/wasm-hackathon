@@ -27,7 +27,11 @@
   $:
     =type-section
     =function-section
+    =table-section
+    =memory-section
+    =global-section
     =export-section
+    =elem-section
     =code-section
   ::  ...   TODO add other sections, add fields for globals + imports
   ==
@@ -43,11 +47,27 @@
   $:  params=(list valtype)
       results=(list valtype)
   ==
+::
 ::  Function section
 ::
 +$  function-section
   $+  function-section
   (list type-id=@)
+::
+::  Table section
+::
++$  table-section  (list table)
++$  table  [%funcref min=@ max=(unit @)]
+::
+::  Memory section
+::
++$  memory-section  (list mem)
++$  mem  [min=@ max=(unit @)]
+::
+::  Global section
+::
++$  global-section  (list global)
++$  global  [=valtype ?(%const %mut)]
 ::
 ::  Export section
 ::
@@ -63,6 +83,11 @@
       [%memory i=@]
       [%global i=@]
   ==
+::
+::  Elem section
+::
++$  elem-section  (list elem)
++$  elem  [%0x0 offset=(list instruction) y=(list @)]
 ::
 ::  Code section
 ::

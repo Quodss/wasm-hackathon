@@ -22,23 +22,25 @@
   |-  ^-  module
   ?~  wasm-bytes  out
   =/  section-code=@ux  i.wasm-bytes
-  ?~  t.wasm-bytes  !!
-  =/  section-size=@  i.t.wasm-bytes
-  =/  section-bytes=(list @ux)  (scag section-size t.t.wasm-bytes)
+  =^  section-size=@  t.wasm-bytes  (snip-u-n t.wasm-bytes 32)
+  =/  section-bytes=(list @ux)  (scag section-size t.wasm-bytes)
   ::  zero-padding
   ::
   =?  section-bytes  !=(section-size (lent section-bytes))
     (weld section-bytes (reap (sub section-size (lent section-bytes)) 0x0))
   =.  out
-    ?+  section-code  out
+    ?+  section-code  ~&("skipped {<section-code>}" out)
     ::  each section is found only once in the binary file
     ::
       %0x1  out(type-section (get-type-section section-bytes))
       %0x3  out(function-section (get-function-section section-bytes))
+      %0x4  out(table-section (get-table-section section-bytes))
+      %0x5  out(memory-section (get-memory-section section-bytes))
       %0x7  out(export-section (get-export-section section-bytes))
+      %0x9  out(elem-section (get-elem-section section-bytes))
       %0xa  out(code-section (get-code-section section-bytes))
     ==
-  $(wasm-bytes (slag section-size t.t.wasm-bytes))
+  $(wasm-bytes (slag section-size t.wasm-bytes))
 ::
 ++  snip-u-n
   |=  [bytes=(list @ux) n=@]
@@ -118,6 +120,59 @@
   ?>  =(num-functions (lent out))
   out
 ::
+++  get-table-section
+  |=  bytes=(list @ux)
+  ^-  table-section
+  |^
+  (scan ;;(tape bytes) table-section-rule)
+  ::
+  ++  table-section-rule  (vec table-rule)
+  ++  table-rule
+    %+  cook  table
+    ;~  plug
+      (cold %funcref (just '\70'))
+      ;~(pose lim-0 lim-1)
+    ==
+  ::
+  ++  lim-0
+    ;~  pfix
+      (just '\00')
+      ;~(plug (i-n 32) (easy ~))
+    ==
+  ::
+  ++  lim-1
+    ;~  pfix
+      (just '\01')
+      ;~(plug (i-n 32) (easy ~) (i-n 32))
+    ==
+  ::
+  --
+::
+++  get-memory-section
+  |=  bytes=(list @ux)
+  ^-  memory-section
+  |^
+  (scan ;;(tape bytes) memory-section-rule)
+  ::
+  ++  memory-section-rule  (vec mem-rule)
+  ++  mem-rule
+    %+  cook  mem
+    ;~(pose lim-0 lim-1)
+  ::
+  ++  lim-0
+    ;~  pfix
+      (just '\00')
+      ;~(plug (i-n 32) (easy ~))
+    ==
+  ::
+  ++  lim-1
+    ;~  pfix
+      (just '\01')
+      ;~(plug (i-n 32) (easy ~) (i-n 32))
+    ==
+  ::
+  --
+::
 ++  get-export-section
   |=  bytes=(list @ux)
   ^-  export-section
@@ -138,12 +193,43 @@
     ;;  tape
     (scag length-name exports-bytes)
   =/  export-desc-byte=@ux  (snag length-name exports-bytes)
-  ?>  =(export-desc-byte %0x0)
-  =^  export-index-byte=@  exports-bytes  (snip-u-n (slag +(length-name) exports-bytes) 32)
-  %=  $
-    out  [[name %func export-index-byte] out]
-    num-exports    (dec num-exports)
+  :: ?>  =(export-desc-byte %0x0)
+  :: =^  export-index-byte=@  exports-bytes  (snip-u-n (slag +(length-name) exports-bytes) 32)
+  :: %=  $
+  ::   out  [[name %func export-index-byte] out]
+  ::   num-exports    (dec num-exports)
+  :: ==
+  ?+    export-desc-byte  !!
+      %0x0
+     =^  export-index-byte=@  exports-bytes  (snip-u-n (slag +(length-name) exports-bytes) 32)
+     %=  $
+       out  [[name %func export-index-byte] out]
+       num-exports    (dec num-exports)
+     ==
+  ::
+      %0x2
+    =^  export-index-byte=@  exports-bytes  (snip-u-n (slag +(length-name) exports-bytes) 32)
+     %=  $
+       out  [[name %memory export-index-byte] out]
+       num-exports    (dec num-exports)
+     ==
   ==
+::
+++  get-elem-section
+  |=  bytes=(list @ux)
+  ^-  elem-section
+  |^
+  (scan ;;(tape bytes) elem-section-rule)
+  ::
+  ++  elem-section-rule  (vec elem-rule)
+  ++  elem-rule
+  %+  cook  elem
+  ;~  plug
+    (just '\00')
+    expression-end
+    vec-i-32
+  ==
+  --
 ::
 ++  get-code-section
   |=  bytes=(list @ux)
@@ -194,286 +280,348 @@
 ++  parse-instructions
   |=  bytes=(pole @ux)
   ^-  (list instruction)
-  |^
-  (scan (tape bytes) expression-end)
-  ::  Functional parser utils for expression parsing
+  (scan ;;(tape bytes) expression-end)
+::  Functional parser utils for expression parsing
+::
+::  ++i-n: parse n-bit unsigned integer 
+::
+++  i-n  ::  parse u32 -> (i-n 32)
+  |=  n-bits=@
+  =*  this  $
+  %+  knee  *@
+  |.  ~+
+  ;~  pose
+    ::  multiple byte case
+    ::
+    ?:  (lte n-bits 7)  fail
+    %+  cook
+      |=  [n=@ m=@]
+      %+  add
+        (mul 128 m)
+      (sub n 128)
+    ;~  plug
+      (shim 128 255)
+      this(n-bits (sub n-bits 7))
+    ==
+    ::  single byte case
+    ::
+    (cook ,@ (shim 0 (dec (bex (min n-bits 7)))))
+  ==
+++  s-n
+  |=  n-bits=@
+  =*  this  $
+  %+  knee  *@s
+  |.  ~+
+  ;~  pose
+    ::  single byte: positive
+    ::
+    (cook |=(n=@ (new:si & n)) (shim 0 (dec (bex (min (dec n-bits) 6)))))
+    ::  single byte: negative
+    ::
+    %+  cook
+      |=  n=@
+      =,  si
+      (dif (new & n) --128)
+    ;~  simu
+      (shim 64 127)
+      (shim (sub 128 (min 128 (bex (dec n-bits)))) 127)
+    ==
+    ::  multiple bytes
+    ::
+    ?:  (lte n-bits 7)  fail
+    %+  cook
+      |=  [n=@s m=@s]
+      =,  si
+      (sum (dif n --128) (pro --128 m))
+    ;~  plug
+      (cook |=(n=@ (new:si & n)) (shim 128 255))
+      this(n-bits (sub n-bits 7))
+    ==
+  ==
+::  ++bild: if an edge `vex` reflects a failure, fail,
+::  otherwise connect `vex` with a rule built from the parsing result
+::  slammed against the gate `gat`
+::
+++  bild
+  |*  [vex=edge gat=_=>(rule |*(* *rule))]
+  ?~  q.vex
+    vex
+  %.  [vex (gat p.u.q.vex)]
+  (comp |*([a=* b=*] b))
+::  parse i32 vector
+::
+++  vec-i-32
+  %+  cook  ,(list @)
+  ;~  bild
+    (i-n 32)
+    |=  n=@
+    (stun [n n] (cook ,@ (i-n 32)))
+  ==
+::
+++  vec           ::  vec-i-32 == (vec (i-n 32))
+  |*  rul=rule
+  ;~  bild
+    (i-n 32)
+    |=  n=@
+    (stun [n n] rul)
+  ==
+::
+++  limits-parser
+  %+  cook  limits
+  ;~
+    pose
+    ;~(plug (just '\00') (i-n 32))
+    ;~(plug (just '\01') (i-n 32) (i-n 32))
+  ==
+::
+:: ++  memory-section-parser
+::   %+  cook  memory-section
+::   ;~
+::     pfix
+::     (just '\05')
+::     (vec limits-parser)
+::   ==
+::
+++  f64
+  %+  cook
+    |=  =(list @)
+    ;;  @rd
+    %+  can  3
+    %+  fuse  (reap 8 1)
+    list
+  (stun [8 8] next)
+::
+++  f32
+  %+  cook
+    |=  =(list @)
+    ;;  @rs
+    %+  can  3
+    %+  fuse  (reap 4 1)
+    list
+  (stun [4 4] next)
+::
+++  fuse                                                ::  from ~paldev
+  |*  [a=(list) b=(list)]
+  ^-  (list [_?>(?=(^ a) i.a) _?>(?=(^ b) i.b)])
+  ?~  a  ~
+  ?~  b  ~
+  :-  [i.a i.b]
+  $(a t.a, b t.b)
+::
+::  parse an expression that ends with `end` (0xb)
+::
+++  expression-end
+  %+  knee  *(list instruction)
+  |.  ~+
+  ;~(sfix (star instr) end)
+::  parse an expression that ends with `else` (0x5)
+::
+++  expression-else
+  %+  knee  *(list instruction)
+  |.  ~+
+  ;~(sfix (star instr) else)
+::
+++  end        (just '\0b')
+++  else       (just '\05')
+++  const-i32  (just '\41')
+++  const-i64  (just '\42')
+++  const-f32  (just '\43')
+++  const-f64  (just '\44')
+++  br-table   (just '\0e')
+++  block-op   (just '\02')
+++  loop-op    (just '\03')
+++  if-op      (just '\04')
+::  parse an instruction
+::
+++  instr
+  ;~  pose
+    instr-zero
+    instr-one
+    instr-two
+    if-else
+    block
+    loop
+    if
+  ==
+::
+::  Instruction parsers
+::
+++  instr-zero  (cook handle-zero-args (mask mask-zero))
+++  instr-one
+  ;~  pose
+    %+  cook  handle-one-arg-i32
+    ;~(plug (mask mask-one-i32) (i-n 32))
   ::
-  ::  ++i-n: parse n-bit unsigned integer 
+    %+  cook  handle-const-i32
+    ;~(plug const-i32 (s-n 64))
   ::
-  ++  i-n  ::  parse u32 -> (i-n 32)
-    |=  n-bits=@
-    =*  this  $
-    %+  knee  *@
-    |.  ~+
-    ;~  pose
-      ::  multiple byte case
-      ::
-      ?:  (lte n-bits 7)  fail
-      %+  cook
-        |=  [n=@ m=@]
-        %+  add
-          (mul 128 m)
-        (sub n 128)
-      ;~  plug
-        (shim 128 255)
-        this(n-bits (sub n-bits 7))
+    %+  cook  handle-const-i64
+    ;~(plug const-i64 (s-n 64))
+  ::
+    %+  cook  handle-const-f32
+    ;~(plug const-f32 f32)
+  ::
+    %+  cook  handle-const-f64
+    ;~(plug const-f64 f64)
+  ==
+::
+++  instr-two
+  ;~  pose
+    %+  cook  handle-two-args-i32
+    ;~(plug (mask mask-two-i32) (i-n 32) (i-n 32))
+  ::
+    %+  cook  handle-br-table
+    ;~(plug br-table vec-i-32 (i-n 32))
+  ==
+::
+++  block
+  %+  cook  handle-block
+  ;~(pfix block-op ;~(plug next expression-end))
+::
+++  loop
+  %+  cook  handle-loop
+  ;~(pfix loop-op ;~(plug next expression-end))
+::
+++  if
+  %+  cook  handle-if
+  ;~(pfix if-op ;~(plug next expression-end))
+::
+++  if-else
+  %+  cook  handle-if-else
+  ;~(pfix if-op ;~(plug next expression-else expression-end))
+::
+::  All handle-X functions must return `instruction` type
+::
+++  mask-zero
+  ^~
+  %+  skim  (gulf '\00' '\ff')
+  |=  op=char
+  ?=(bin-opcodes-zero-args op)
+::
+++  handle-zero-args
+  |=  op=char
+  ^-  instruction
+  ?+  op  ~|(`@ux`op !!)
+    %0x4b  [%gt %i32 `%u]
+    %0x4d  [%le %i32 `%u]
+    %0x6a  [%add %i32]
+    %0x6c  [%mul %i32]
+    %0x47  [%ne %i32]
+    %0x48  [%lt %i32 `%s]
+    %0x63  [%lt %f64 ~]
+    %0x95  [%div %f32 ~]
+    %0xa1  [%sub %f64]
+    %0xa2  [%mul %f64]
+  ==
+::
+++  mask-one-64
+  ^-  (list char)
+  :~  '\42'
+      '\44'
+  ==
+++  mask-one-i32
+  ^~
+  %+  skim  (gulf '\00' '\ff')
+  |=  op=char
+  ?&  ?=(bin-opcodes-one-arg op)
+      !(~(has in (silt mask-one-64)) op)
+      !=(op '\43')
+      !=(op '\41')
+  ==
+::
+++  handle-one-arg-i32
+  |=  [op=char arg=@]
+  ^-  instruction
+  ?+  op  ~|(`@ux`op !!)
+    %0xc   [%br arg]
+    %0xd   [%br-if arg]
+    %0x10  [%call arg]
+    %0x20  [%local-get arg]
+    %0x21  [%local-set arg]
+    %0x22  [%local-tee arg]
+    %0x41  [%const %i32 arg]
+  ==
+::
+++  mask-two-i32
+  ^~
+  %+  skim  (gulf '\00' '\ff')
+  |=  op=char
+  ?&  ?=(bin-opcodes-two-args op)
+      !=(op '\0e')
+  ==
+::
+++  handle-two-args-i32
+  |=  [op=char arg1=@ arg2=@]
+  ^-  instruction
+  ?+  op  ~|(`@ux`op !!)
+      %0x11
+    ?>  =(arg2 0)
+    [%call-indirect arg1 %0x0]
+  ::
+      %0x36
+    [%store %i32 [arg1 arg2] ~]
+  ::
+      %0x37
+    [%store %i64 [arg1 arg2] ~]
+  ==
+::
+++  handle-br-table
+  |=  [op=char vec=(list @) i=@]
+  ^-  instruction
+  ?>  ?=(%0xe op)
+  [%br-table vec i]
+::
+++  handle-block
+  |=  [blocktype-index=@ body=(list instruction)]
+  ^-  instruction
+  [%block ~ body]
+::
+++  handle-loop
+  |=  [blocktype-index=@ body=(list instruction)]
+  ^-  instruction
+  [%loop ~ body]
+::
+++  handle-if
+  |=  [blocktype-index=@ body=(list instruction)]
+  ^-  instruction
+  [%if ~ body ~]
+::
+++  handle-if-else
+  |=  $:  blocktype-index=@
+          body-true=(list instruction)
+          body-false=(list instruction)
       ==
-      ::  single byte case
-      ::
-      (cook ,@ (shim 0 (dec (bex (min n-bits 7)))))
-    ==
-  ::  ++bild: if an edge `vex` reflects a failure, fail,
-  ::  otherwise connect `vex` with a rule built from the parsing result
-  ::  slammed against the gate `gat`
-  ::
-  ++  bild
-    |*  [vex=edge gat=_=>(rule |*(* *rule))]
-    ?~  q.vex
-      vex
-    %.  [vex (gat p.u.q.vex)]
-    (comp |*([a=* b=*] b))
-  ::  parse i32 vector
-  ::
-  ++  vec-i-32
-    %+  cook  ,(list @)
-    ;~  bild
-      (i-n 32)
-      |=  n=@
-      (stun [n n] (cook ,@ (i-n 32)))
-    ==
-  ::
-  ++  vec           ::  vec-i-32 == (vec (i-n 32))
-    |*  rul=rule
-    ;~  bild
-      (i-n 32)
-      |=  n=@
-      (stun [n n] rul)
-    ==
-  ::
-  ++  limits-parser
-    %+  cook  limits
-    ;~
-      pose
-      ;~(plug (just '\00') (i-n 32))
-      ;~(plug (just '\01') (i-n 32) (i-n 32))
-    ==
-  ::
-  :: ++  memory-section-parser
-  ::   %+  cook  memory-section
-  ::   ;~
-  ::     pfix
-  ::     (just '\05')
-  ::     (vec limits-parser)
-  ::   ==
-  ::
-  ++  f64
-    %+  cook
-      |=  =(list @)
-      ;;  @rd
-      %+  can  3
-      %+  fuse  (reap 8 1)
-      list
-    (stun [8 8] next)
-  ::
-  ++  f32
-    %+  cook
-      |=  =(list @)
-      ;;  @rs
-      %+  can  3
-      %+  fuse  (reap 4 1)
-      list
-    (stun [4 4] next)
-  ::
-  ++  fuse                                                ::  from ~paldev
-    |*  [a=(list) b=(list)]
-    ^-  (list [_?>(?=(^ a) i.a) _?>(?=(^ b) i.b)])
-    ?~  a  ~
-    ?~  b  ~
-    :-  [i.a i.b]
-    $(a t.a, b t.b)
-  ::
-  ::  parse an expression that ends with `end` (0xb)
-  ::
-  ++  expression-end
-    %+  knee  *(list instruction)
-    |.  ~+
-    ;~(sfix (star instr) end)
-  ::  parse an expression that ends with `else` (0x5)
-  ::
-  ++  expression-else
-    %+  knee  *(list instruction)
-    |.  ~+
-    ;~(sfix (star instr) else)
-  ::
-  ++  end        (just '\0b')
-  ++  else       (just '\05')
-  ++  const-i64  (just '\42')
-  ++  const-f32  (just '\43')
-  ++  const-f64  (just '\44')
-  ++  br-table   (just '\0e')
-  ++  block-op   (just '\02')
-  ++  loop-op    (just '\03')
-  ++  if-op      (just '\04')
-  ::  parse an instruction
-  ::
-  ++  instr
-    ;~  pose
-      instr-zero
-      instr-one
-      instr-two
-      if-else
-      block
-      loop
-      if
-    ==
-  ::
-  ::  Instruction parsers
-  ::
-  ++  instr-zero  (cook handle-zero-args (mask mask-zero))
-  ++  instr-one
-    ;~  pose
-      %+  cook  handle-one-arg-i32
-      ;~(plug (mask mask-one-i32) (i-n 32))
-    ::
-      %+  cook  handle-const-i64
-      ;~(plug const-i64 (i-n 64))
-    ::
-      %+  cook  handle-const-f32
-      ;~(plug const-f32 f32)
-    ::
-      %+  cook  handle-const-f64
-      ;~(plug const-f64 f64)
-    ==
-  ::
-  ++  instr-two
-    ;~  pose
-      %+  cook  handle-two-args-i32
-      ;~(plug (mask mask-two-i32) (i-n 32) (i-n 32))
-    ::
-      %+  cook  handle-br-table
-      ;~(plug br-table vec-i-32 (i-n 32))
-    ==
-  ::
-  ++  block
-    %+  cook  handle-block
-    ;~(pfix block-op ;~(plug next expression-end))
-  ::
-  ++  loop
-    %+  cook  handle-loop
-    ;~(pfix loop-op ;~(plug next expression-end))
-  ::
-  ++  if
-    %+  cook  handle-if
-    ;~(pfix if-op ;~(plug next expression-end))
-  ::
-  ++  if-else
-    %+  cook  handle-if-else
-    ;~(pfix if-op ;~(plug next expression-else expression-end))
-  ::
-  ::  All handle-X functions must return `instruction` type
-  ::
-  ++  mask-zero
-    ^~
-    %+  skim  (gulf '\00' '\ff')
-    |=  op=char
-    ?=(bin-opcodes-zero-args op)
-  ::
-  ++  handle-zero-args
-    |=  op=char
-    ^-  instruction
-    ?+  op  ~|(`@ux`op !!)
-      %0x6a  [%add %i32]
-      %0x6c  [%mul %i32]
-      %0x47  [%ne %i32]
-      %0x48  [%lt %i32 `%s]
-      %0x63  [%lt %f64 ~]
-      %0xa1  [%sub %f64]
-      %0xa2  [%mul %f64]
-    ==
-  ::
-  ++  mask-one-64
-    ^-  (list char)
-    :~  '\42'
-        '\44'
-    ==
-  ++  mask-one-i32
-    ^~
-    %+  skim  (gulf '\00' '\ff')
-    |=  op=char
-    ?&  ?=(bin-opcodes-one-arg op)
-        !(~(has in (silt mask-one-64)) op)
-        !=(op '\43')
-    ==
-  ::
-  ++  handle-one-arg-i32
-    |=  [op=char arg=@]
-    ^-  instruction
-    ?+  op  ~|(`@ux`op !!)
-      %0xd   [%br-if arg]
-      %0x10  [%call arg]
-      %0x20  [%local-get arg]
-      %0x21  [%local-set arg]
-      %0x22  [%local-tee arg]
-      %0x41  [%const %i32 arg]
-    ==
-  ::
-  ++  mask-two-i32
-    ^~
-    %+  skim  (gulf '\00' '\ff')
-    |=  op=char
-    ?&  ?=(bin-opcodes-two-args op)
-        !=(op '\0e')
-    ==
-  ::
-  ++  handle-two-args-i32
-    |=  [op=char arg1=@ arg2=@]
-    ^-  instruction
-    !!
-  ::
-  ++  handle-br-table
-    |=  [op=char vec=(list @) i=@]
-    ^-  instruction
-    ?>  ?=(%0xe op)
-    [%br-table vec i]
-  ::
-  ++  handle-block
-    |=  [blocktype-index=@ body=(list instruction)]
-    ^-  instruction
-    [%block ~ body]
-  ::
-  ++  handle-loop
-    |=  [blocktype-index=@ body=(list instruction)]
-    ^-  instruction
-    [%loop ~ body]
-  ::
-  ++  handle-if
-    |=  [blocktype-index=@ body=(list instruction)]
-    ^-  instruction
-    [%if ~ body ~]
-  ::
-  ++  handle-if-else
-    |=  $:  blocktype-index=@
-            body-true=(list instruction)
-            body-false=(list instruction)
-        ==
-    ^-  instruction
-    [%if ~ body-true body-false]
-  ::
-  ++  handle-const-f64
-    |=  [op=char i=@rd]
-    ^-  instruction
-    [%const %f64 i]
-  ::
-  ++  handle-const-f32
-    |=  [op=char i=@rs]
-    ^-  instruction
-    [%const %f32 i]
-  ::
-  ++  handle-const-i64
-    |=  [op=char i=@]
-    ^-  instruction
-    !!
-  ::
-  --
+  ^-  instruction
+  [%if ~ body-true body-false]
+::
+++  handle-const-f64
+  |=  [op=char i=@rd]
+  ^-  instruction
+  [%const %f64 i]
+::
+++  handle-const-f32
+  |=  [op=char i=@rs]
+  ^-  instruction
+  [%const %f32 i]
+::
+++  handle-const-i32
+  |=  [op=char i=@s]
+  ^-  instruction
+  =/  i-unsigned=@
+    =,  si
+    ?:  (syn i)
+      +:(old i)
+    (sub (bex 32) +:(old i))
+  [%const %i32 i-unsigned]
+::
+++  handle-const-i64
+  |=  [op=char i=@s]
+  ^-  instruction
+  =/  i-unsigned=@
+    =,  si
+    ?:  (syn i)
+      +:(old i)
+    (sub (bex 64) +:(old i))
+  [%const %i64 i-unsigned]
 ::
 --

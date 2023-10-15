@@ -119,6 +119,7 @@
       $(a t.a, b t.b)
     ::
     ++  unrecognized-bytes  ::  we recognize 0x1, 0x3, 0x7, 0xa
+      ^~
       ^-  (list char)
       %+  skip  (gulf '\00' '\ff')
       |=  c=char
