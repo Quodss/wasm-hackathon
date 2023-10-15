@@ -173,6 +173,16 @@
   ::
   --
 ::
+:: ++  get-global-section
+::   |=  bytes=(list @ux)
+::   ^-  global-section
+::   |^
+::   (scan ;;(tape bytes) global-section-rule)
+::   ::
+::   ++  global-section-rule  !!  ::(vec global-rule)
+::   :: ++  global-rule  !!
+::   --
+::
 ++  get-export-section
   |=  bytes=(list @ux)
   ^-  export-section

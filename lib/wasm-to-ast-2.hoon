@@ -5,7 +5,7 @@
   |=  wasm=@
   ^-  module.ast
   (rash wasm module.r)
- r: parsing rules
+::  r: parsing rules
 :: 
 ++  r
   |%
