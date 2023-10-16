@@ -33,6 +33,7 @@
     =export-section
     =elem-section
     =code-section
+    =data-section
   ::  ...   TODO add other sections, add fields for globals + imports
   ==
 ::  Definitions of sections
@@ -63,11 +64,14 @@
 ::
 +$  memory-section  (list mem)
 +$  mem  [min=@ max=(unit @)]
++$  memarg
+  $+  memarg
+  [align=@ offset=@]
 ::
 ::  Global section
 ::
 +$  global-section  (list global)
-+$  global  [=valtype ?(%const %mut)]
++$  global  [=valtype ?(%const %mut) e=(list instruction)]
 ::
 ::  Export section
 ::
@@ -196,7 +200,7 @@
     [%max type=?(%f32 %f64)]
     [%copysign type=?(%f32 %f64)]
     [%wrap ~]
-    [%extend mode=?(%s %u)]
+    [%extend type=?(%i32 %i64) source=?(%8 %16 %32) mode=?(%s %u)]
     [%convert type=?(%f32 %f64) source-type=?(%i32 %i64) mode=?(%s %u)]
     [%demote ~]
     [%promote ~]
@@ -204,10 +208,13 @@
     ::  maybe todo: FC extensions, SIMD opcodes
   ==
 ::
-+$  memarg
-  $+  memarg
-  [align=@ offset=@]
+::  Data section
 ::
++$  data-section  (list data)
++$  data  $%
+            [%active offset=(list instruction) b=[len=@ array=@]]
+            [%passive b=[len=@ array=@]]
+          ==
 ::  Interpreter types
 ::
 +$  stack  [p=(unit branch) q=(pole coin-wasm)]
@@ -405,7 +412,16 @@
 +$  min-opcodes  ?(%0x96 %0xa4)  ::  f32, f64
 +$  max-opcodes  ?(%0x97 %0xa5)  ::  f32, f64
 +$  copysign-opcodes  ?(%0x98 %0xa6)  ::  f32, f64
-+$  extend-opcodes  ?(%0xac %0xad)  ::  s, u
++$  extend-opcodes
+  $?
+    %0xac  ::  i32 -> i64 s
+    %0xad  ::  i32 -> i64 u
+    %0xc0  ::  i8 -> i32 s
+    %0xc1  ::  i16 -> i32 s
+    %0xc2  ::  i8 -> i64 s
+    %0xc3  ::  i16 -> i64 s
+    %0xc4  ::  i32 -> i64 s  ??  same as 0xac???
+  ==
 +$  convert-opcodes
   $?
     %0xb2  ::  i32 s -> f32
