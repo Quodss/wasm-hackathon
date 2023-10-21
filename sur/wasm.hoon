@@ -218,7 +218,7 @@
 ::  Interpreter types
 ::
 +$  stack  [p=(unit branch) q=(pole coin-wasm)]
-+$  branch  @  ::  label of br; number of jumps
++$  branch  $%([%return ~] [%target i=@])  ::  target for branching: return or target an index
 ::
 ::  Binary opcode classification
 ::

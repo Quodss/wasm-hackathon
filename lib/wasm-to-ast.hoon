@@ -29,7 +29,7 @@
   =?  section-bytes  !=(section-size (lent section-bytes))
     (weld section-bytes (reap (sub section-size (lent section-bytes)) 0x0))
   =.  out
-    ?+  section-code  ~&("skipped {<section-code>}" out)
+    ?+  section-code  out  ::  ~&("skipped {<section-code>}" out)
     ::  each section is found only once in the binary file
     ::
       %0x1  out(type-section (get-type-section section-bytes))
@@ -317,7 +317,9 @@
   ++  to-atoms
     |=  a=(list char)
     ^-  [@ @]
-    [(lent a) (crip a)]
+    :-  (lent a)
+    %+  can  3
+    (fuse (reap (lent a) 1) a)
   ::
   --
 ::
@@ -945,21 +947,23 @@
 ++  handle-const-i32
   |=  [op=char i=@s]
   ^-  instruction
-  =/  i-unsigned=@
-    =,  si
-    ?:  (syn i)
-      +:(old i)
-    (sub (bex 32) +:(old i))
-  [%const %i32 i-unsigned]
+  =;  i-unsigned=@
+    [%const %i32 i-unsigned]
+  =,  si
+  ?:  (syn i)
+    +:(old i)
+  (sub (bex 32) +:(old i))
+  
 ::
 ++  handle-const-i64
   |=  [op=char i=@s]
   ^-  instruction
-  =/  i-unsigned=@
-    =,  si
-    ?:  (syn i)
-      +:(old i)
-    (sub (bex 64) +:(old i))
-  [%const %i64 i-unsigned]
+  =;  i-unsigned=@
+    [%const %i64 i-unsigned]
+  =,  si
+  ?:  (syn i)
+    +:(old i)
+  (sub (bex 64) +:(old i))
+  
 ::
 --
