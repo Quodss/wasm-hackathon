@@ -17,7 +17,7 @@
 :: (rip 3 buffer)
 :: (instantiate:ast-interpreter (main:wasm-to-ast bin-wasm))
 :: (main:wasm-to-ast bin-wasm)
-=/  string-in=tape  "qwertyui"
+=/  string-in=tape  (zing (reap 100 (gulf 'a' 'z')))
 =+  hwasm=(instantiate:ast-interpreter (main:wasm-to-ast bin-wasm))
 ::  get retptr:
 ::
@@ -52,6 +52,7 @@
 ::
 =/  r0=@  (cut 3 [retptr 4] buffer.hwasm)
 =/  r1=@  (cut 3 [(add retptr 4) 4] buffer.hwasm)
+~&  [r0 r1]
 ::  get string with r0 and r1
 ::
 =/  string-out=tape
@@ -59,4 +60,5 @@
   (cut 3 [r0 r1] buffer.hwasm)
 ::  free the memory? nah, later
 ::
+:: hwasm
 string-out

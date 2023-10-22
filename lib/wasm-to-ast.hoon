@@ -106,7 +106,7 @@
 ++  get-valtype
   |=  byte=@
   ^-  valtype
-  ?+  byte  !!
+  ?+  byte  ~|(`@ux`byte !!)
     %0x7f  %i32
     %0x7e  %i64
     %0x7d  %f32
@@ -914,7 +914,10 @@
 ++  handle-block
   |=  [blocktype-index=@ body=(list instruction)]
   ^-  instruction
-  [%block ~ body]
+  :-  %block
+  :_  body
+  ?:  ?=(%0x40 blocktype-index)  ~
+  ~[(get-valtype blocktype-index)]
 ::
 ++  handle-loop
   |=  [blocktype-index=@ body=(list instruction)]
@@ -924,7 +927,10 @@
 ++  handle-if
   |=  [blocktype-index=@ body=(list instruction)]
   ^-  instruction
-  [%if ~ body ~]
+  :-  %if
+  :_  [body ~]
+  ?:  ?=(%0x40 blocktype-index)  ~
+  ~[(get-valtype blocktype-index)]
 ::
 ++  handle-if-else
   |=  $:  blocktype-index=@
@@ -932,7 +938,10 @@
           body-false=(list instruction)
       ==
   ^-  instruction
-  [%if ~ body-true body-false]
+  :-  %if
+  :_  [body-true body-false]
+  ?:  ?=(%0x40 blocktype-index)  ~
+  ~[(get-valtype blocktype-index)]
 ::
 ++  handle-const-f64
   |=  [op=char i=@rd]

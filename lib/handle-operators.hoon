@@ -7,6 +7,7 @@
 ++  complement-to-si
   |=  [base=@ n=@]
   ^-  @s
+  =.  n  (mod n (bex base))
   =/  sign=?  (lth n (bex (dec base)))
   %+  new:si  sign
   ?:  sign  n
@@ -302,6 +303,21 @@
   :-  type
   (dis n.a n.b)  ::  ATTENTION! loobean disjunction is boolean conjunction
 ::
+++  rotl
+  |=  [type=?(%i32 %i64) a=coin-wasm b=coin-wasm]
+  ^-  coin-wasm
+  ?>  =(type type.a)
+  ?>  =(type type.b)
+  ?-    type 
+      %i32
+    :-  %i32
+    (~(rol fe 5) 0 (mod n.b 32) n.a)
+  ::
+      %i64
+    :-  %i64
+    (~(rol fe 6) 0 (mod n.b 64) n.a)
+  ==
+::
 ++  popcnt
   |=  [type=?(%i32 %i64) a=coin-wasm]
   ?>  =(type type.a)
@@ -318,4 +334,24 @@
   ?>  =(type type.a)
   :-  %i32
   ?:(=(n.a 0) 1 0)
+::
+++  clz
+  |=  [type=?(%i32 %i64) a=coin-wasm]
+  ^-  coin-wasm
+  ?>  =(type type.a)
+  ?-    type
+      %i32
+    :-  %i32
+    (^sub 32 (xeb n.a))
+  ::
+      %i64
+    :-  %i64
+    (^sub 64 (xeb n.a))
+  ==
+::
+++  extend
+  |=  [type=%i32 source=%8 mode=%s a=coin-wasm]  ::  just one case of extend for now
+  ^-  coin-wasm 
+  :-  %i32
+  (si-to-complement 32 (complement-to-si 8 n.a))
 --

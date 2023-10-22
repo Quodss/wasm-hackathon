@@ -60,7 +60,6 @@
           max-pages=`(unit @)`?:(?=(@ memory-section.module) `0 max.i.memory-section.module)
           table=`(list @)`~  ::  XX mayb incorrect? deal with this later
           globals=`(list coin-wasm)`~
-
       ==
   =*  state-global  -
   ::  instantiate table
@@ -85,13 +84,18 @@
     ?>  ?=(%active -.data)
     ?>  ?=([[%const [%i32 @]] ~] offset.data)  ::  XX the DIRTIEST hack, to be fixed
     (sew bloq=3 [n.p.i.offset.data size=len.b.data array.b.data] buffer)
+  ::  call-trace for debugging
+  ::
+  :: =+  call-trace=`(list @)`~
   ::
   |%
   ++  this  .
   ++  call-id
     |=  [func-id=@ input-params=(list coin-wasm)]
     ^-  [(list coin-wasm) _this]
-    ~&  [func-id input-params]
+    :: ~&  [func-id input-params]
+    :: =.  call-trace  [func-id call-trace]
+    :: ~&  [(flop call-trace) input-params]
     =/  =func-type  (snag (snag func-id function-section) type-section)
     =/  =code  (snag func-id code-section)
     =/  expression  expression.code
@@ -111,14 +115,16 @@
     ::
     :: This doesn't work, there are left-over operands on the stack. Fix later with validation
     ::
-    :: ?.  =((get-types q.out) results.func-type)
-    ::   ~|  [(get-types q.out) results.func-type]
-    ::   ~|  q.out
-    ::   ~|  "in func-id={<func-id>}"
-    ::   !!
-    :: [q.out this(state-global state-global:reduced)]
-    ~?  =(func-id 23)  q.out
-    [(scag (lent results.func-type) q.out) this(state-global state-global:reduced)]
+    ?.  =((get-types q.out) results.func-type)
+      ~|  [(get-types q.out) results.func-type]
+      ~|  q.out
+      ~|  "in func-id={<func-id>}"
+      !!
+    :: =.  call-trace  +.call-trace
+    :: ~&  "end {<func-id>}"
+    [q.out this(state-global state-global:reduced)]
+    :: ~?  =(func-id 23)  q.out
+    :: [(scag (lent results.func-type) q.out) this(state-global state-global:reduced)]
   ::  +hwasm-instance: core for expression computation
   ::
   ++  hwasm-instance
@@ -218,7 +224,8 @@
         %=    this
             q.s
           %+  weld
-            (scag (lent results.subfunc-type) (flop out))
+            :: (scag (lent results.subfunc-type) (flop out))
+            (flop out)
           (slag (lent params.subfunc-type) q.s)
         ::
           state-global  state-global:instance
@@ -238,8 +245,10 @@
         %=    this
             q.s
           %+  weld
-            (scag (lent results.subfunc-type) (flop out))
+            :: (scag (lent results.subfunc-type) (flop out))
+            (flop out)
           (slag (lent params.subfunc-type) rest)
+        ::
           state-global  state-global:instance
         ==
       ::
@@ -251,7 +260,8 @@
         ?>  ?=([b=coin-wasm a=coin-wasm rest=*] q.s)
         =,  q.s
         =,  instruction
-        this(q.s [(lt:handle type mode a b) rest])
+        =+  result=(lt:handle type mode a b)
+        this(q.s [result rest])
       ::
           [%gt type=valtype mode=(unit ?(%s %u))]
         ?>  ?=([b=coin-wasm a=coin-wasm rest=*] q.s)
@@ -297,6 +307,12 @@
           ?:  ?=([%return ~] u.p.s.if-instance)  `[%return ~]
           ?:  =(0 i.u.p.s.if-instance)  ~
           `[%target (dec i.u.p.s.if-instance)]
+        =?  q.s.if-instance  =(~ br)
+          =+  out=(scag (lent result-type) q.s.if-instance)
+          ?>  =(result-type (get-types out))
+          out
+        :: ~?  &(=(~ br) !=(~ q.s.if-instance))
+          :: q.s.if-instance
         %=  this
           p.s     br
           q.s     (weld q.s.if-instance rest)
@@ -320,7 +336,8 @@
         ?>  ?=([b=coin-wasm a=coin-wasm rest=*] q.s)
         =,  q.s
         =,  instruction
-        this(q.s [(div:handle type mode a b) rest])
+        =+  result=(div:handle type mode a b)
+        this(q.s [result rest])
       ::
           [%or type=?(%i32 %i64)]
         ?>  ?=([b=coin-wasm a=coin-wasm rest=*] q.s)
@@ -334,6 +351,12 @@
         =,  instruction
         this(q.s [(xor:handle type a b) rest])
       ::
+          [%rotl type=?(%i32 %i64)]
+        ?>  ?=([b=coin-wasm a=coin-wasm rest=*] q.s)
+        =,  q.s
+        =,  instruction
+        this(q.s [(rotl:handle type a b) rest])
+      ::
           [%and type=?(%i32 %i64)]
         ?>  ?=([b=coin-wasm a=coin-wasm rest=*] q.s)
         =,  q.s
@@ -346,7 +369,7 @@
         =,  instruction
         this(q.s [(eq:handle type a b) rest])
       ::
-          [%block ~ body=*]
+          [%block *]  ::  [%block result-type=(list valtype) body=(list instruction)]
         =,  instruction
         =/  block-instance  reduce:this(s *stack, expression body)
         =/  br=(unit branch)
@@ -354,6 +377,10 @@
           ?:  ?=([%return ~] u.p.s.block-instance)  `[%return ~]
           ?:  =(0 i.u.p.s.block-instance)  ~
           `[%target (dec i.u.p.s.block-instance)]
+        =?  q.s.block-instance  =(~ br)
+          =+  out=(scag (lent result-type) q.s.block-instance)
+          ?>  =(result-type (get-types out))
+          out
         %=  this
           p.s     br
           q.s     (weld q.s.block-instance q.s)
@@ -370,11 +397,23 @@
         =,  instruction
         this(q.s [(popcnt:handle type a) rest])
       ::
+          [%extend type=%i32 source=%8 mode=%s]
+        ?>  ?=([a=coin-wasm rest=*] q.s)
+        =,  q.s
+        =,  instruction
+        this(q.s [(extend:handle type source mode a) rest])
+      ::
           [%eqz type=?(%i32 %i64)]
         ?>  ?=([a=coin-wasm rest=*] q.s)
         =,  q.s
         =,  instruction
         this(q.s [(eqz:handle type a) rest])
+      ::
+          [%clz type=?(%i32 %i64)]
+        ?>  ?=([a=coin-wasm rest=*] q.s)
+        =,  q.s
+        =,  instruction
+        this(q.s [(clz:handle type a) rest])
       ::
           [%br label=@]
         =,  instruction
@@ -404,15 +443,19 @@
                 ?=([%target @] u.p.s.loop-instance)
                 =(0 i.u.p.s.loop-instance)
             ==
-          $(locals locals.loop-instance)
+          %=  $
+            locals  locals.loop-instance
+            state-global  state-global.loop-instance
+          ==
         =/  br=(unit branch)
           ?~  p.s.loop-instance  ~
           ?:  ?=([%return ~] u.p.s.loop-instance)  `[%return ~]
           `[%target (dec i.u.p.s.loop-instance)]
         %=  this
-          p.s     br
-          q.s     (weld q.s.loop-instance q.s)
-          locals  locals.loop-instance
+          p.s           br
+          q.s           (weld q.s.loop-instance q.s)
+          locals        locals.loop-instance
+          state-global  state-global.loop-instance
         ==
       ::
           [%store %i32 *]
@@ -423,9 +466,10 @@
         :: ?>  (lth (add i 4) (mul 65.536 n-pages))  ::  let's not care about memory size for now
         =;  [size=@ to-put=@]
           this(q.s rest, buffer (sew bloq=3 [i size to-put] buffer))
+        :: =-  ~&([instruction n.addr `@t`->] -)
         ?~  n.instruction
           [4 n.content]
-        [(div u.n.instruction 8) (mod n.content (bex u.n.instruction))]
+        [(div u.n.instruction 8) `@t`(mod n.content (bex u.n.instruction))]
       ::
           [%store %i64 *]
         ?>  ?=([content=[type=%i64 n=@] addr=[type=%i32 n=@] rest=*] q.s)
@@ -441,18 +485,19 @@
       ::
           [%load %i32 *]
         ?>  ?=([addr=[type=%i32 n=@] rest=*] q.s)
+        :: ~&  [instruction addr.q.s]
         =,  q.s
         =,  instruction
         =/  i=@  (add n.addr offset.m)
         :: ?>  (lth (add i 4) (mul 65.536 n-pages))
         =;  loaded=@
           this(q.s [[%i32 loaded] rest])
+        :: =-  ~&([instruction n.addr `@t`-] -)
         ?~  n.instruction
           (cut 3 [i 4] buffer)
         ?>  ?=(^ mode.instruction)
         ?-    u.mode.instruction
             %u
-          =-  ~&(- -)
           (cut 3 [i (div u.n.instruction 8)] buffer)
         ::
             %s
@@ -463,6 +508,7 @@
       ::
           [%load %i64 *]
         ?>  ?=([addr=[type=%i32 n=@] rest=*] q.s)
+        :: ~&  [instruction addr.q.s]
         =,  q.s
         =,  instruction
         =/  i=@  (add n.addr offset.m)
