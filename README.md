@@ -32,7 +32,7 @@ To use the jet testbed:
 Now you can run the tests with `-test`, and you can test the performance by evaluating Ackermann function in UWasm, the jet and in native Hoon (without caching): `+wasm!ackermann`
 
 ## UWasm team
-~dozreg-toplud
-~wanref-rappet
-~datful-samned
-~motdeg-bintul
+ - ~dozreg-toplud
+ - ~wanref-rappet
+ - ~datful-samned
+ - ~motdeg-bintul
