@@ -444,7 +444,7 @@
                 =(0 i.u.p.s.loop-instance)
             ==
           %=  $
-            locals  locals.loop-instance
+            locals        locals.loop-instance
             state-global  state-global.loop-instance
           ==
         =/  br=(unit branch)
@@ -469,7 +469,7 @@
         :: =-  ~&([instruction n.addr `@t`->] -)
         ?~  n.instruction
           [4 n.content]
-        [(div u.n.instruction 8) `@t`(mod n.content (bex u.n.instruction))]
+        [(div u.n.instruction 8) (mod n.content (bex u.n.instruction))]
       ::
           [%store %i64 *]
         ?>  ?=([content=[type=%i64 n=@] addr=[type=%i32 n=@] rest=*] q.s)
@@ -530,6 +530,23 @@
       ::
           [%memory-grow *]
         this(n-pages +(n-pages), q.s [[%i32 n-pages] q.s])
+      ::
+          [%convert *]  ::  [%convert type=?(%f32 %f64) source-type=?(%i32 %i64) mode=?(%s %u)]
+        ?>  ?=(%f64 type.instruction)
+        ?>  ?=(%i64 source-type.instruction)
+        ?>  ?=(%u mode.instruction)
+        ?>  ?=([a=[type=%i64 n=@] rest=*] q.s)
+        =,  q.s
+        =,  instruction
+        this(q.s [[%f64 (sun:rd n.a)] rest])
+      ::
+          [%reinterpret *]  ::  [%convert type=?(%f32 %f64) source-type=?(%i32 %i64) mode=?(%s %u)]
+        ?>  ?=(%f64 type.instruction)
+        ?>  ?=(%i64 source-type.instruction)
+        ?>  ?=([a=[type=%i64 n=@] rest=*] q.s)
+        =,  q.s
+        =,  instruction
+        this(q.s [[%f64 ;;(@rd n.a)] rest])
       ==
     --
   --
