@@ -25,7 +25,7 @@ The jet testbed includes our Vere build that imports [wasm3](https://github.com/
 To use the jet testbed:
 1. Clone [repo for Vere](https://github.com/melodicht/vere/tree/add-wasm3)
 1. Checkout branch `add-wasm3` and build Vere: `bazel build :urbit`
-2. Boot a fakezod: `./vere/bazel-bin/pkg/vere/urbit -F dev`
+2. Boot a fakezod: `./vere/bazel-bin/pkg/vere/urbit -F zod`
 3. Mount `%base` desk. Make and mount `%wasm` desk
 4. Copy the contents from respective directories and `|commit` them
 
