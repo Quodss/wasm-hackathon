@@ -2,7 +2,10 @@
 Repository for presenting the work of our team on the Web Assembly interpreter on Urbit.
 
 ## Usage
-The repo contains two main parts: `wasm` desk for Urbit and jet testbed.
+The repo contains two main parts: `wasm` desk for Urbit and jet testbed. To clone both:
+```
+git clone --recursive git@github.com:Quodss/wasm-hackathon.git
+```
 
 ### `wasm` desk
 To use `wasm` desk:
