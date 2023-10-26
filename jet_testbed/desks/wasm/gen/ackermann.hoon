@@ -87,21 +87,24 @@
 --
 =+
   =>  (instantiate:ast-interpreter (main:wasm-to-ast bin-wasm))
-  ~&  "HWasm"
+  ~&  "HWasm (patience please, takes about 1 min...)"
   ~>  %bout
-  -:(call-id (find-func-id 'ackermann' module) ~[[%i64 3] [%i64 4]])
+  =-  ~&(- -)
+  -:(call-id (find-func-id 'ackermann' module) ~[[%i64 3] [%i64 7]])
 =>  +  =+
   =/  funcid=@
     =>  (instantiate:ast-interpreter (main:wasm-to-ast bin-wasm))
     (find-func-id 'ackermann' module)
   ~&  "CWasm"
   ~>  %bout
-  =/  [m=@ n=@]  [3 4]
+  =-  ~&(- -)
+  =/  [m=@ n=@]  [3 7]
   (wasl bin-wasm funcid 2 (add (lsh [3 8] n) m) 1)
 =>  +
 ~&  "Hoon (no caching)"
 ~>  %bout
-%.  [3 4]
+=-  ~&(- -)
+%.  [3 7]
 |=  [m=@ n=@]
 ^-  @
 :: ~+  no caching for a more fair comparison
