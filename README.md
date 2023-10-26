@@ -9,7 +9,7 @@ To use `wasm` desk:
 1. Make a new desk (e.g. `|new-desk %wasm`) and mount it;
 2. Clone the repo and copy the contents to your new desk;
 3. `|commit` the desk
-4. Run -test /=wasm=/tests ~ to run the unit tests.
+4. Run `-test /=wasm=/tests ~` to run the unit tests.
 
 The interpreter includes:
  - `.wasm` binary file parser `wasm-to-ast.hoon`
@@ -20,7 +20,7 @@ The interpreter includes:
 The tests include both simple functions for numerical arithmetics and a bit more elaborated one for string manipulations. The interpreter is still a work in progress, so some instruction definitions might be missing in the interpreter, nor do the modules get parsed completely (imports are ignored)
 
 ### Jet testbed
-The jet testbed includes our Vere build that imports wasm3 Web Assembly interpreter in C. It also has its own `base` and `wasm` desks. We use `++was` function defined in `hoon.hoon` for jet testing purposes. We haven't had enough time to turn it into a full jet, but some tests still could be run to verify that the interface between Vere and wasm3 works.
+The jet testbed includes our Vere build that imports [wasm3](https://github.com/wasm3/wasm3) Web Assembly interpreter in C. It also has its own `base` and `wasm` desks. We use `++was` function defined in `hoon.hoon` for jet testing purposes. We haven't had enough time to turn it into a full jet, but some tests still could be run to verify that the interface between Vere and wasm3 works.
 
 To use the jet testbed:
 1. Checkout branch `add-wasm3` and build Vere: `bazel build :urbit`
