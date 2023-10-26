@@ -23,6 +23,7 @@ The tests include both simple functions for numerical arithmetics and a bit more
 The jet testbed includes our Vere build that imports [wasm3](https://github.com/wasm3/wasm3) Web Assembly interpreter in C. It also has its own `base` and `wasm` desks. We use `++was` function defined in `hoon.hoon` for jet testing purposes. We haven't had enough time to turn it into a full jet, but some tests still could be run to verify that the interface between Vere and wasm3 works.
 
 To use the jet testbed:
+1. Clone [repo for Vere](https://github.com/melodicht/vere/tree/add-wasm3)
 1. Checkout branch `add-wasm3` and build Vere: `bazel build :urbit`
 2. Boot a fakezod: `./vere/bazel-bin/pkg/vere/urbit -F dev`
 3. Mount `%base` desk. Make and mount `%wasm` desk
