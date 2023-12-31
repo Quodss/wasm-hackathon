@@ -1,3 +1,5 @@
+Update: this repository is archived, the project is continued at [urwasm](https://github.com/Quodss/urwasm)
+
 # UWasm
 Repository for presenting the work of our team on the Web Assembly interpreter on Urbit.
 
